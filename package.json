@@ -1,0 +1,26 @@
+{
+  "name": "practice_exam_platform",
+  "version": "1.0.0",
+  "description": "Making a small version of Exam platform with OAuth, User, Admin, Database for Practice Questions and User details",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Basant-creator/Practice_Exam_Platform.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Basant-creator/Practice_Exam_Platform/issues"
+  },
+  "homepage": "https://github.com/Basant-creator/Practice_Exam_Platform#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "mongoose": "^9.3.0"
+  }
+}

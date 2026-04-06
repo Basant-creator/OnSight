@@ -15,7 +15,6 @@ def create_app():
         print("WARNING: Starting application without database connection!")
     app.config["db"] = db
 
-    # Routes
     @app.route("/", methods=["GET"])
     def index():
         db_status = "Connected" if app.config.get("db") is not None else "Disconnected"

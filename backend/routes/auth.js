@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.post("/signup", async (req, res) => {
   try {
-    const { name, email, password } = req.body || {};
+    const { name, email, password, role } = req.body || {};
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: "name, email, and password are required" });
@@ -21,10 +21,14 @@ router.post("/signup", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(String(password), 10);
 
+    const validRoles = ['student', 'teacher', 'admin'];
+    const assignedRole = validRoles.includes(role) ? role : 'student';
+
     const createdUser = await User.create({
       name: String(name).trim(),
       email: normalizedEmail,
       password: hashedPassword,
+      role: assignedRole,
     });
 
     return res.status(201).json({
@@ -33,6 +37,7 @@ router.post("/signup", async (req, res) => {
         id: createdUser._id,
         name: createdUser.name,
         email: createdUser.email,
+        role: createdUser.role,
       },
     });
   } catch (error) {
@@ -67,6 +72,7 @@ router.post("/login", async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
       },
     });
   } catch (error) {

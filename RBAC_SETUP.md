@@ -149,8 +149,8 @@ PORT=3000
 
 ## Future Enhancements
 
-- [ ] Refresh token rotation
-- [ ] Role hierarchy (admin > teacher > student)
-- [ ] Permission-based access (granular than roles)
-- [ ] Audit logging for access control
-- [ ] Rate limiting on auth endpoints
+- [x] Refresh token rotation
+- [x] Role hierarchy (admin > teacher > student)
+- [x] Permission-based access (granular than roles)
+- [x] Audit logging for access control
+- [x] Rate limiting on auth endpoints

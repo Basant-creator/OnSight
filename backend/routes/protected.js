@@ -1,6 +1,6 @@
 const express = require("express");
 const authenticateToken = require("../middleware/auth.middleware");
-const authorizeRole = require("../middleware/role.middleware");
+const { authorizeRole, authorizePermission } = require("../middleware/role.middleware");
 
 const router = express.Router();
 
@@ -12,7 +12,7 @@ router.get("/admin/dashboard", authenticateToken, authorizeRole("admin"), (req, 
   });
 });
 
-// Example: Teacher-only endpoint
+// Example: Teacher-only endpoint (Admin will also have access due to hierarchy)
 router.get("/teacher/questions", authenticateToken, authorizeRole("teacher"), (req, res) => {
   return res.status(200).json({
     message: "Teacher - Manage exam questions",
@@ -20,7 +20,7 @@ router.get("/teacher/questions", authenticateToken, authorizeRole("teacher"), (r
   });
 });
 
-// Example: Student-only endpoint
+// Example: Student-only endpoint (Teacher and Admin will also have access)
 router.get("/student/exams", authenticateToken, authorizeRole("student"), (req, res) => {
   return res.status(200).json({
     message: "Available exams for student",
@@ -28,10 +28,10 @@ router.get("/student/exams", authenticateToken, authorizeRole("student"), (req, 
   });
 });
 
-// Example: Multiple roles allowed
-router.get("/submit-exam", authenticateToken, authorizeRole("student", "teacher"), (req, res) => {
+// Example: Permission-based endpoint (Only roles with "view:analytics" like Teacher or Admin can access)
+router.get("/analytics", authenticateToken, authorizePermission("view:analytics"), (req, res) => {
   return res.status(200).json({
-    message: "Exam submitted successfully",
+    message: "Analytics data",
     user: req.user,
   });
 });

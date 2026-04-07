@@ -3,6 +3,7 @@ const mongoose = require("mongoose")
 const cors = require("cors")
 const path = require("path")
 const authRoutes = require("./routes/auth")
+const protectedRoutes = require("./routes/protected")
 require("dotenv").config({ path: path.resolve(__dirname, '../.env') })
 const app = express()
 
@@ -19,6 +20,7 @@ app.get("/", (req,res)=>{
 })
 
 app.use("/auth", authRoutes)
+app.use("/api", protectedRoutes)
 
 app.listen(3000, ()=>{
     console.log("Server running on port 3000")

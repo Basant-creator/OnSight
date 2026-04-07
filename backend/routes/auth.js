@@ -1,8 +1,18 @@
 const express = require("express");
+const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 
 const router = express.Router();
+
+// Generate JWT Token
+const generateToken = (user) => {
+  return jwt.sign(
+    { id: user._id, email: user.email, role: user.role },
+    process.env.JWT_SECRET || "your-secret-key",
+    { expiresIn: "24h" }
+  );
+};
 
 router.post("/signup", async (req, res) => {
   try {
@@ -66,8 +76,11 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
+    const token = generateToken(user);
+
     return res.status(200).json({
       message: "Login successful",
+      token,
       user: {
         id: user._id,
         name: user.name,

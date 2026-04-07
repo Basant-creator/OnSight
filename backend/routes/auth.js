@@ -5,7 +5,7 @@ const User = require("../models/User");
 
 const router = express.Router();
 
-// Generate JWT Token
+
 const generateToken = (user) => {
   return jwt.sign(
     { id: user._id, email: user.email, role: user.role },
@@ -35,7 +35,7 @@ router.post("/signup", async (req, res) => {
     const assignedRole = validRoles.includes(role) ? role : 'student';
 
     const createdUser = await User.create({
-      name: String(name).trim(),
+      name: name,
       email: normalizedEmail,
       password: hashedPassword,
       role: assignedRole,

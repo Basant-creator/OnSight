@@ -1,41 +1,30 @@
-# 🚀 OnSight
+# 🎓 Practice Exam Platform
 
 ## 🧠 What is this?
 
-OnSight is a smart monitoring and detection system that uses real-time data (like camera input or user activity) to provide instant insights and alerts.
+This is a seamless, automated **Practice Exam Platform** designed to streamline evaluations for both teachers and students.
 
-In simple terms:  
-It helps users keep an eye on things automatically instead of manually checking everything.
+**In simple terms:**
+Teachers upload exam question papers (as PDFs) along with an Answer Key. Students log in, attempt the test through the UI, and the system *automatically grades* their performance in real-time. Teachers simply review the results and manually release them, instantly granting students a detailed performance analysis without any tedious manual grading interference.
 
 ---
 
 ## ⚙️ How it works
 
-- User connects input source (camera / system / data stream)
-- The system processes the data using logic or models
-- It detects events, patterns, or anomalies
-- Output is shown as alerts, logs, or visual insights
-
-So instead of constantly watching, the system does the watching for you.
+1. **Teacher Setup**: A Teacher uploads a Question Paper PDF and provides the corresponding Answer Key to the system.
+2. **Student Attempt**: Students log in securely, select the available test, and submit their answers.
+3. **Auto-Grading**: The system actively grades the student's submission instantly against the Answer Key without teacher interference.
+4. **Teacher Review & Release**: The Teacher reviews the overall test data and clicks "Release Results".
+5. **Student Analysis**: Students receive their scores alongside an in-depth analysis of their performance.
 
 ---
 
 ## 🧰 Tech Stack
 
-- Frontend: React / HTML / CSS / JavaScript  
-- Backend: Node.js / Express  
-- Database: MongoDB  
-- Other tools: APIs, real-time processing, possibly ML models  
-
----
-
-## ✨ Features
-
-- Real-time monitoring and detection  
-- Automated alerts for important events  
-- Clean and simple dashboard for insights  
-- Scalable architecture for handling multiple inputs  
-- Easy integration with different data sources  
+- **Frontend**: React / HTML / CSS / JavaScript (WIP)
+- **Backend**: Node.js / Express
+- **Database**: MongoDB (Mongoose)
+- **Security & Infrastructure**: Fully integrated JWT authentication, advanced Role-Based Access Control (RBAC), Refresh Token rotations, API Rate Limiting, and active Audit Logging. 
 
 ---
 
@@ -87,21 +76,21 @@ Your backend will print `MongoDB Connected` and will be accessible at `http://lo
 
 ---
 
-## 🚧 Future Plans
+## ✨ Features
 
-- Add AI-based detection for smarter predictions  
-- Improve accuracy and reduce false alerts  
-- Enhance UI/UX  
-- Add user authentication and role-based access  
-- Mobile support for monitoring on the go  
-- Cloud deployment for better scalability  
+- **Automated Grading Engine**: Instantly maps student answers to the teacher's key.
+- **Secure Role Hierarchy**: Distinct views and granular permissions mapped dynamically to `Admin > Teacher > Student`.
+- **Audit Logging**: Every sensitive action (login, failure, token rotation) is recorded to MongoDB.
+- **Secure Sessions**: Integrated short-lived Access Tokens and long-lived Refresh Tokens.
 
 ---
 
-## 🎯 Why this project exists
+## 🚧 Future Plans
 
-Because constantly monitoring systems or environments manually is inefficient and error-prone.  
-OnSIght aims to automate that process and make monitoring smarter and faster.
+- Full PDF Parsing / OCR support to extract text from question papers.
+- Deeper statistical algorithms for Student Performance Analysis (e.g. topic-wise weaknesses).
+- Email or SMS notifications when results are officially released by the Teacher.
+- Complete the React frontend dashboard integration.
 
 ---
 
@@ -109,13 +98,6 @@ OnSIght aims to automate that process and make monitoring smarter and faster.
 
 Want to contribute?
 
-- Fork the repository  
-- Make your changes  
-- Submit a pull request  
-
----
-
-## 📌 Final Note
-
-This project is still evolving.  
-There will be bugs. Improvements are ongoing.
+1. Fork the repository
+2. Make your code changes & fixes
+3. Submit a pull request!

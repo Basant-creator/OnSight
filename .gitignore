@@ -23,3 +23,4 @@ Thumbs.db
 # MongoDB local database files (if any)
 data/
 out.txt
+CODE_REVIEW.md

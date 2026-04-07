@@ -1,4 +1,4 @@
-# 🎓 Practice Exam Platform
+# 🎓 OnSight
 
 ## 🧠 What is this?
 

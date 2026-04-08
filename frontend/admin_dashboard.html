@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Provisioning Control - OnSight</title>
+    <link rel="stylesheet" href="style.css"/>
+    <script src="script.js" defer></script>
+</head>
+<body>
+
+<div class="bg-deco">
+    <div class="bg-deco-grad"></div>
+</div>
+
+<div class="app-container">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="brand">
+            <h1>OnSight</h1>
+            <p>Admin Control</p>
+        </div>
+        
+        <div class="nav-menu">
+            <a href="#" class="nav-link active">
+                <span class="material-symbols-outlined">admin_panel_settings</span>
+                Provisioning
+            </a>
+            <a href="login.html" onclick="handleLogout(event)" class="nav-link" style="margin-top: auto; color: var(--error);">
+                <span class="material-symbols-outlined">exit_to_app</span>
+                Terminate Session
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="top-nav">
+            <div class="header-brand">System Administration</div>
+            <div class="header-actions">
+                <div class="user-profile">
+                    <div class="user-info">
+                        <p class="name" id="currentUserDisplay">Loading...</p>
+                        <p class="role" id="currentRoleDisplay">Administration</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="page-container">
+            <!-- Hero -->
+            <section class="hero-section" style="border-bottom: none; padding-bottom: 0;">
+                <h1 class="hero-title editorial-text"><span class="gradient-text">Organizational Provisioning</span></h1>
+                <p class="hero-subtitle">Securely spawn new personnel and students. Access strictly restricted.</p>
+            </section>
+
+            <!-- Provisioning Form Panel -->
+            <section style="display: grid; grid-template-columns: 1fr; gap: 2rem; max-width: 600px;">
+                
+                <div class="card highlight" style="padding: 2.5rem;">
+                    <div class="card-header" style="margin-bottom: 2rem;">
+                        <h2 class="card-title" style="margin: 0; font-size: 1.5rem;">Create User Construct</h2>
+                        <span class="badge secondary" style="background-color: rgba(103, 0, 181, 0.2); color: var(--primary);">Secure Link</span>
+                    </div>
+
+                    <!-- Dynamic UI Messages -->
+                    <div id="provision-msg-box" style="display: none; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; font-size: 0.875rem; text-align: center; font-weight: bold;"></div>
+
+                    <form id="provisionForm" class="flex-col gap-4">
+                        <div class="flex-col gap-1">
+                            <label class="text-sub" style="font-weight: bold; color: var(--on-surface);">Target Role</label>
+                            <select id="newUserRole" required style="width: 100%; height: 2.5rem; padding-left: 1rem; border-radius: 0.5rem; background-color: var(--surface-container-high); border: 1px solid var(--surface-bright); color: var(--on-surface); font-family: inherit;">
+                                <option value="" disabled selected>Select an access tier...</option>
+                                <option value="sub_admin">Sub-Administrator (Head Admins Only)</option>
+                                <option value="teacher">Faculty / Teacher</option>
+                                <option value="student">Student</option>
+                            </select>
+                        </div>
+
+                        <div class="flex-col gap-1">
+                            <label class="text-sub" style="font-weight: bold; color: var(--on-surface);">Full Name</label>
+                            <input type="text" id="newUserName" required placeholder="Alexander Vance" style="width: 100%; height: 2.5rem; padding-left: 1rem; border-radius: 0.5rem; background-color: var(--surface-container-high); border: 1px solid var(--surface-bright); color: var(--on-surface);"/>
+                        </div>
+
+                        <div class="flex-col gap-1">
+                            <label class="text-sub" style="font-weight: bold; color: var(--on-surface);">Institutional Email</label>
+                            <input type="email" id="newUserEmail" required placeholder="alexander@onsight.edu" style="width: 100%; height: 2.5rem; padding-left: 1rem; border-radius: 0.5rem; background-color: var(--surface-container-high); border: 1px solid var(--surface-bright); color: var(--on-surface);"/>
+                        </div>
+
+                        <div class="flex-col gap-1" style="margin-bottom: 1rem;">
+                            <label class="text-sub" style="font-weight: bold; color: var(--on-surface);">Initial Secure Password</label>
+                            <input type="password" id="newUserPass" required placeholder="Minimum 8 characters" style="width: 100%; height: 2.5rem; padding-left: 1rem; border-radius: 0.5rem; background-color: var(--surface-container-high); border: 1px solid var(--surface-bright); color: var(--on-surface);"/>
+                        </div>
+
+                        <button type="submit" class="btn-card primary" style="height: 3rem; font-size: 1rem;">
+                            Inject Entity into Database
+                            <span class="material-symbols-outlined material-fill">add_circle</span>
+                        </button>
+                    </form>
+                </div>
+
+            </section>
+        </div>
+    </main>
+</div>
+
+<!-- On load, fetch user data from local storage to show name -->
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const userStr = localStorage.getItem("onsight_user");
+        if (userStr) {
+            const user = JSON.parse(userStr);
+            document.getElementById("currentUserDisplay").innerText = user.name;
+            document.getElementById("currentRoleDisplay").innerText = "Role Validated: " + user.role.toUpperCase();
+        }
+    });
+</script>
+
+</body>
+</html>

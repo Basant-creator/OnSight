@@ -11,26 +11,6 @@ const getCookieOptions = (maxAgeInMs) => ({
 const ACCESS_TOKEN_MAX_AGE = 15 * 60 * 1000; // 15 minutes
 const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-const signup = async (req, res, next) => {
-  try {
-    const { user, accessToken, refreshToken } = await authService.signupUser(req.body, req.ip);
-
-    res.cookie("accessToken", accessToken, getCookieOptions(ACCESS_TOKEN_MAX_AGE));
-    res.cookie("refreshToken", refreshToken, getCookieOptions(REFRESH_TOKEN_MAX_AGE));
-
-    return res.status(201).json({
-      message: "Signup successful",
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
-};
 
 const login = async (req, res, next) => {
   try {
@@ -85,7 +65,6 @@ const logout = async (req, res, next) => {
 };
 
 module.exports = {
-  signup,
   login,
   refresh,
   logout

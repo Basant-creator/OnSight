@@ -1,8 +1,19 @@
 const express = require("express");
 const authenticateToken = require("../middleware/auth.middleware");
 const { authorizeRole, authorizePermission } = require("../middleware/role.middleware");
+const validate = require("../middleware/validate.middleware");
+const { createUserSchema } = require("../validations/user.validation");
+const userController = require("../controllers/user.controller");
 
 const router = express.Router();
+
+// Admin provisioning endpoint
+router.post(
+  "/admin/create-user",
+  authenticateToken,
+  validate(createUserSchema),
+  userController.createUser
+);
 
 // Example: Admin-only endpoint
 router.get("/admin/dashboard", authenticateToken, authorizeRole("admin"), (req, res) => {

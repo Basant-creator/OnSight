@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Teacher Dashboard - OnSight</title>
+    <link rel="stylesheet" href="style.css"/>
+    <script src="script.js" defer></script>
+</head>
+<body>
+
+<div class="bg-deco">
+    <div class="bg-deco-grad"></div>
+</div>
+
+<div class="app-container">
+    <nav class="sidebar">
+        <div class="brand">
+            <h1>OnSight</h1>
+            <p>Exam Faculty</p>
+        </div>
+        
+        <div class="nav-menu">
+            <a href="#" class="nav-link active">
+                <span class="material-symbols-outlined">dashboard</span>
+                Dashboard
+            </a>
+            <a href="#" class="nav-link">
+                <span class="material-symbols-outlined">quiz</span>
+                Manage Exams
+            </a>
+        </div>
+
+        <div class="sidebar-footer">
+            <button class="btn-primary">
+                <span class="material-symbols-outlined">add</span>
+                Add Question
+            </button>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <header class="top-nav">
+            <div class="header-brand">OnSight</div>
+            
+            <div class="header-actions">
+                <div class="user-profile">
+                    <div class="user-info">
+                        <p class="name">Dr. Julian Vane</p>
+                        <p class="role">Faculty Head</p>
+                    </div>
+                    <div class="avatar">
+                        <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCuqfLdtKGtscPlygo1GmkBGDSOmUruPavipCnGRJurEs-n6JS68Egt9wJ0I_f6FR9MMTg5euEWo9xA963KvRc1SvHLAmES04gmDUXB9U2mEbnK6mRP85jwmBJQPymnScx-fYyxIMMwRjLWPk3qX5Q9lHMs3z9ILILJaroPw1rOFErcGhn3NJFRzupfO-L_XxshETjrLL-5crMp2UvTKxF__OWatMDn33WYeRPirMOq-iUNyEA8nF_657JlVgg2DATfrCsm0DSfkTc" alt="Faculty Profile"/>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="page-container">
+            <section>
+                <div class="flex-col gap-2" style="margin-bottom: 2rem;">
+                    <h2 class="hero-title editorial-text"><span class="gradient-text">Exam Questions Management</span></h2>
+                    <p class="hero-subtitle">Securely draft, edit, and organize multiple-choice questions for the upcoming semester's examinations.</p>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header">
+                        <div>Question Snippet</div>
+                        <div>Category/Subject</div>
+                        <div>Difficulty</div>
+                        <div class="col-right">Actions</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="flex-col">
+                            <p class="text-main text-trunc">Which property ensures that a database transaction is all-or-nothing?</p>
+                            <p class="text-sub text-trunc">Ans: Atomicity</p>
+                        </div>
+                        <div>
+                            <span class="badge secondary">Systems Arch</span>
+                        </div>
+                        <div>
+                            <div class="diff-dots">
+                                <div class="dot"></div>
+                                <span class="diff-label">EASY</span>
+                            </div>
+                        </div>
+                        <div class="actions-flex">
+                            <button><span class="material-symbols-outlined">edit</span></button>
+                            <button><span class="material-symbols-outlined">delete</span></button>
+                        </div>
+                    </div>
+
+                    <div class="table-row">
+                        <div class="flex-col">
+                            <p class="text-main text-trunc">In graph theory, what is a completely connected graph called?</p>
+                            <p class="text-sub text-trunc">Ans: Complete graph (or Clique)</p>
+                        </div>
+                        <div>
+                            <span class="badge secondary">Discrete Math</span>
+                        </div>
+                        <div>
+                            <div class="diff-dots">
+                                <div class="dot"></div>
+                                <div class="dot"></div>
+                                <span class="diff-label">MEDIUM</span>
+                            </div>
+                        </div>
+                        <div class="actions-flex">
+                            <button><span class="material-symbols-outlined">edit</span></button>
+                            <button><span class="material-symbols-outlined">delete</span></button>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+        </div>
+    </main>
+</div>
+
+</body>
+</html>

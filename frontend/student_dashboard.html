@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>OnSight Student Dashboard</title>
+    <link rel="stylesheet" href="style.css"/>
+    <script src="script.js" defer></script>
+</head>
+<body>
+
+<div class="bg-deco">
+    <div class="bg-deco-grad"></div>
+    <div class="bg-deco-glow"></div>
+</div>
+
+<div class="app-container">
+    <nav class="sidebar">
+        <div class="brand">
+            <h1>OnSight</h1>
+            <p>Student Portal</p>
+        </div>
+        
+        <div class="nav-menu">
+            <a href="#" class="nav-link active">
+                <span class="material-symbols-outlined material-fill">dashboard</span>
+                Dashboard
+            </a>
+            <a href="#" class="nav-link">
+                <span class="material-symbols-outlined">quiz</span>
+                Exams
+            </a>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <header class="top-nav">
+            <div class="search-bar">
+                <span class="material-symbols-outlined">search</span>
+                <input type="text" placeholder="Search exams..."/>
+            </div>
+            
+            <div class="header-actions">
+                <div class="user-profile">
+                    <div class="user-info">
+                        <p class="name">Student</p>
+                        <p class="role">Guest Access</p>
+                    </div>
+                    <div class="avatar">
+                        <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuA9AnAL9WvhVbfZnk3jpowrebxg4J8EMjVFglmPY2Ys6UmKpPRQVDBElHbotqlqb5tmKqPLQN2zGSrYGtnrxLr62wke3kjUqtdRORephUPf5JXtro6VeHb2sA1MOwyaClxFqYE5h9jCz7BFvapccHSCYHiz03E8uLH7u8uCe3bfOVwRzj_AFw9MEh6ODZZToHxNIetPW7_xoeci41RD_GinzLOKr6OsNOesvyboX-PeTWlegNxeTnnaI3L9jxV5VEQ0GHr1f2d96j4" alt="Profile"/>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="page-container">
+            <section class="hero-section">
+                <h1 class="hero-title editorial-text">Welcome back, Alex.</h1>
+                <p class="hero-subtitle">Browse and take exams assigned by your faculty.</p>
+            </section>
+
+            <section>
+                <div class="section-header">
+                    <h2 class="section-title editorial-text">Available Exams</h2>
+                </div>
+                
+                <div class="card-grid">
+                    <div class="card highlight">
+                        <div class="card-header">
+                            <div class="card-icon primary">
+                                <span class="material-symbols-outlined material-fill">bolt</span>
+                            </div>
+                            <span class="badge secondary">60 Mins</span>
+                        </div>
+                        <h3 class="card-title">Discrete Mathematics Final</h3>
+                        <p class="card-desc">Comprehensive review of graph theory, combinatorics, and logic foundations.</p>
+                        <button class="btn-card primary">
+                            Begin Exam
+                            <span class="material-symbols-outlined">rocket_launch</span>
+                        </button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-icon secondary">
+                                <span class="material-symbols-outlined">database</span>
+                            </div>
+                            <span class="badge secondary">45 Mins</span>
+                        </div>
+                        <h3 class="card-title">Systems Architecture Setup</h3>
+                        <p class="card-desc">Midterm examination covering distributed systems, load balancing, and database normalization.</p>
+                        <button class="btn-card secondary">
+                            Begin Exam
+                            <span class="material-symbols-outlined">play_arrow</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+</div>
+
+</body>
+</html>

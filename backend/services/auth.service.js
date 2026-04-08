@@ -15,42 +15,6 @@ const manageRefreshTokens = async (user, newRefreshToken) => {
   await user.save();
 };
 
-const signupUser = async ({ name, email, password, role }, ipAddress) => {
-  const normalizedEmail = String(email).trim().toLowerCase();
-  const existingUser = await User.findOne({ email: normalizedEmail });
-
-  if (existingUser) {
-    const error = new Error("Email already exists");
-    error.status = 409;
-    throw error;
-  }
-
-  const hashedPassword = await bcrypt.hash(String(password), 10);
-  const validRoles = ["student", "teacher", "admin"];
-  const assignedRole = validRoles.includes(role) ? role : "student";
-
-  const createdUser = await User.create({
-    name,
-    email: normalizedEmail,
-    password: hashedPassword,
-    role: assignedRole,
-  });
-
-  const accessToken = generateAccessToken(createdUser);
-  const refreshToken = generateRefreshToken(createdUser);
-
-  await manageRefreshTokens(createdUser, refreshToken);
-
-  await logAudit({
-    userId: createdUser._id,
-    action: "SIGNUP",
-    description: "User registered successfully",
-    endpoint: "/auth/signup",
-    ipAddress,
-  });
-
-  return { user: createdUser, accessToken, refreshToken };
-};
 
 const loginUser = async ({ email, password }, ipAddress) => {
   const normalizedEmail = String(email).trim().toLowerCase();
@@ -130,7 +94,6 @@ const logoutUser = async (userId, refreshTokenToRevoke, ipAddress) => {
 };
 
 module.exports = {
-  signupUser,
   loginUser,
   refreshUserToken,
   logoutUser,

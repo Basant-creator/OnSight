@@ -1,6 +1,32 @@
 // Global configuration
 const API_BASE = "http://localhost:5000";
 
+// ------------------------------------------------------------------
+// THEME TOGGLE LOGIC
+// ------------------------------------------------------------------
+const initTheme = () => {
+    const savedTheme = localStorage.getItem("onsight_theme");
+    if (savedTheme) {
+        document.documentElement.setAttribute("data-theme", savedTheme);
+    } else {
+        document.documentElement.setAttribute("data-theme", "light");
+    }
+};
+
+const toggleTheme = () => {
+    const current = document.documentElement.getAttribute("data-theme");
+    const next = current === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("onsight_theme", next);
+};
+
+initTheme();
+
+document.addEventListener("DOMContentLoaded", () => {
+    const toggles = document.querySelectorAll(".theme-toggle");
+    toggles.forEach(btn => btn.addEventListener("click", toggleTheme));
+});
+
 /**
  * Universal fetch wrapper for OnSight API.
  * CRITICAL: Automatically injects credentials: "include" to transmit the httpOnly Cookie to backend!
@@ -131,4 +157,30 @@ async function handleLogout(e) {
     
     // Sever tie
     window.location.href = "login.html";
+}
+
+// ------------------------------------------------------------------
+// STUDENT DASHBOARD TABS
+// ------------------------------------------------------------------
+const navDashboard = document.getElementById("nav-dashboard");
+const navExams = document.getElementById("nav-exams");
+const viewDashboard = document.getElementById("view-dashboard");
+const viewExams = document.getElementById("view-exams");
+
+if (navDashboard && navExams && viewDashboard && viewExams) {
+    navDashboard.addEventListener("click", (e) => {
+        e.preventDefault();
+        navDashboard.classList.add("active");
+        navExams.classList.remove("active");
+        viewDashboard.style.display = "block";
+        viewExams.style.display = "none";
+    });
+
+    navExams.addEventListener("click", (e) => {
+        e.preventDefault();
+        navExams.classList.add("active");
+        navDashboard.classList.remove("active");
+        viewExams.style.display = "block";
+        viewDashboard.style.display = "none";
+    });
 }

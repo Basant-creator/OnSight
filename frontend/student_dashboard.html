@@ -9,10 +9,7 @@
 </head>
 <body>
 
-<div class="bg-deco">
-    <div class="bg-deco-grad"></div>
-    <div class="bg-deco-glow"></div>
-</div>
+
 
 <div class="app-container">
     <nav class="sidebar">
@@ -22,11 +19,11 @@
         </div>
         
         <div class="nav-menu">
-            <a href="#" class="nav-link active">
+            <a href="#" class="nav-link active" id="nav-dashboard">
                 <span class="material-symbols-outlined material-fill">dashboard</span>
                 Dashboard
             </a>
-            <a href="#" class="nav-link">
+            <a href="#" class="nav-link" id="nav-exams">
                 <span class="material-symbols-outlined">quiz</span>
                 Exams
             </a>
@@ -41,6 +38,9 @@
             </div>
             
             <div class="header-actions">
+                <button class="theme-toggle" style="color: var(--primary); display: flex; align-items: center;" title="Toggle Dark/Light Mode">
+                    <span class="material-symbols-outlined">contrast</span>
+                </button>
                 <div class="user-profile">
                     <div class="user-info">
                         <p class="name">Student</p>
@@ -56,46 +56,180 @@
         <div class="page-container">
             <section class="hero-section">
                 <h1 class="hero-title editorial-text">Welcome back, Alex.</h1>
-                <p class="hero-subtitle">Browse and take exams assigned by your faculty.</p>
+                <p class="hero-subtitle">Review your progress and manage your assessments.</p>
             </section>
 
-            <section>
-                <div class="section-header">
-                    <h2 class="section-title editorial-text">Available Exams</h2>
-                </div>
-                
-                <div class="card-grid">
-                    <div class="card highlight">
-                        <div class="card-header">
-                            <div class="card-icon primary">
-                                <span class="material-symbols-outlined material-fill">bolt</span>
-                            </div>
-                            <span class="badge secondary">60 Mins</span>
+            <!-- Dashboard View -->
+            <div id="view-dashboard">
+                <!-- Scores and Percentage -->
+                <div class="dashboard-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon primary">
+                            <span class="material-symbols-outlined">analytics</span>
                         </div>
-                        <h3 class="card-title">Discrete Mathematics Final</h3>
-                        <p class="card-desc">Comprehensive review of graph theory, combinatorics, and logic foundations.</p>
-                        <button class="btn-card primary">
-                            Begin Exam
-                            <span class="material-symbols-outlined">rocket_launch</span>
-                        </button>
+                        <div class="stat-details">
+                            <h3>Overall Score</h3>
+                            <p class="stat-value">850 <span class="stat-max">/ 1000</span></p>
+                        </div>
                     </div>
+                    <div class="stat-card">
+                        <div class="stat-icon secondary">
+                            <span class="material-symbols-outlined">percent</span>
+                        </div>
+                        <div class="stat-details">
+                            <h3>Average Rank</h3>
+                            <p class="stat-value">Top 15%</p>
+                        </div>
+                    </div>
+                    <div class="stat-card percentage-card">
+                         <div class="circular-progress">
+                             <svg viewBox="0 0 36 36" class="circular-chart primary">
+                                <path class="circle-bg"
+                                  d="M18 2.0845
+                                    a 15.9155 15.9155 0 0 1 0 31.831
+                                    a 15.9155 15.9155 0 0 1 0 -31.831"
+                                />
+                                <path class="circle"
+                                  stroke-dasharray="85, 100"
+                                  d="M18 2.0845
+                                    a 15.9155 15.9155 0 0 1 0 31.831
+                                    a 15.9155 15.9155 0 0 1 0 -31.831"
+                                />
+                                <text x="18" y="20.35" class="percentage">85%</text>
+                              </svg>
+                         </div>
+                         <div class="stat-details">
+                             <h3>Pass Rate</h3>
+                             <p class="text-sub">Great standing</p>
+                         </div>
+                    </div>
+                </div>
 
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="card-icon secondary">
-                                <span class="material-symbols-outlined">database</span>
-                            </div>
-                            <span class="badge secondary">45 Mins</span>
-                        </div>
-                        <h3 class="card-title">Systems Architecture Setup</h3>
-                        <p class="card-desc">Midterm examination covering distributed systems, load balancing, and database normalization.</p>
-                        <button class="btn-card secondary">
-                            Begin Exam
-                            <span class="material-symbols-outlined">play_arrow</span>
-                        </button>
+                <section class="chart-section">
+                    <div class="section-header">
+                        <h2 class="section-title editorial-text">Performance Analysis</h2>
                     </div>
-                </div>
-            </section>
+                    <div class="card chart-container">
+                        <div class="bar-chart">
+                            <div class="bar-item">
+                                <div class="bar" style="height: 65%;"></div>
+                                <span class="bar-label">Week 1</span>
+                            </div>
+                            <div class="bar-item">
+                                <div class="bar" style="height: 80%;"></div>
+                                <span class="bar-label">Week 2</span>
+                            </div>
+                            <div class="bar-item">
+                                <div class="bar" style="height: 50%;"></div>
+                                <span class="bar-label">Week 3</span>
+                            </div>
+                            <div class="bar-item">
+                                <div class="bar highlight-bar" style="height: 90%;"></div>
+                                <span class="bar-label">Week 4</span>
+                            </div>
+                            <div class="bar-item">
+                                <div class="bar" style="height: 75%;"></div>
+                                <span class="bar-label">Week 5</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Exams View -->
+            <div id="view-exams" style="display: none;">
+                <section>
+                    <div class="section-header">
+                        <h2 class="section-title editorial-text">Recent Attempts</h2>
+                        <span class="badge secondary">Last 3</span>
+                    </div>
+                    
+                    <div class="card-grid">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-icon secondary">
+                                    <span class="material-symbols-outlined">done_all</span>
+                                </div>
+                                <span class="badge" style="background:#2a2b3b; color: #a4e5c3;">Passed</span>
+                            </div>
+                            <h3 class="card-title">Cloud Computing Basics</h3>
+                            <p class="card-desc">Score: 92/100 | Completed on Oct 12</p>
+                            <button class="btn-card" style="background:var(--surface-container-high); color:var(--on-surface-variant)" disabled>
+                                Review Results
+                                <span class="material-symbols-outlined">visibility</span>
+                            </button>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-icon secondary">
+                                    <span class="material-symbols-outlined">done_all</span>
+                                </div>
+                                <span class="badge" style="background:#2a2b3b; color: #a4e5c3;">Passed</span>
+                            </div>
+                            <h3 class="card-title">Network Security Midterm</h3>
+                            <p class="card-desc">Score: 88/100 | Completed on Oct 5</p>
+                            <button class="btn-card" style="background:var(--surface-container-high); color:var(--on-surface-variant)" disabled>
+                                Review Results
+                                <span class="material-symbols-outlined">visibility</span>
+                            </button>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-icon secondary">
+                                    <span class="material-symbols-outlined">close</span>
+                                </div>
+                                <span class="badge" style="background:#2a2b3b; color: var(--error);">Failed</span>
+                            </div>
+                            <h3 class="card-title">Advanced Algorithms</h3>
+                            <p class="card-desc">Score: 45/100 | Completed on Sep 28</p>
+                            <button class="btn-card" style="background:var(--surface-container-high); color:var(--on-surface-variant)" disabled>
+                                Review Results
+                                <span class="material-symbols-outlined">visibility</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <section style="margin-top: 3rem;">
+                    <div class="section-header">
+                        <h2 class="section-title editorial-text">Upcoming Exams</h2>
+                    </div>
+                    
+                    <div class="card-grid">
+                        <div class="card highlight">
+                            <div class="card-header">
+                                <div class="card-icon primary">
+                                    <span class="material-symbols-outlined material-fill">bolt</span>
+                                </div>
+                                <span class="badge secondary">60 Mins</span>
+                            </div>
+                            <h3 class="card-title">Discrete Mathematics Final</h3>
+                            <p class="card-desc">Comprehensive review of graph theory, combinatorics, and logic foundations.</p>
+                            <button class="btn-card primary">
+                                Begin Exam
+                                <span class="material-symbols-outlined">rocket_launch</span>
+                            </button>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-icon secondary">
+                                    <span class="material-symbols-outlined">database</span>
+                                </div>
+                                <span class="badge secondary">45 Mins</span>
+                            </div>
+                            <h3 class="card-title">Systems Architecture Setup</h3>
+                            <p class="card-desc">Midterm examination covering distributed systems, load balancing, and database normalization.</p>
+                            <button class="btn-card secondary">
+                                Begin Exam
+                                <span class="material-symbols-outlined">play_arrow</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </div>
         </div>
     </main>
 </div>

@@ -25,6 +25,62 @@ initTheme();
 document.addEventListener("DOMContentLoaded", () => {
     const toggles = document.querySelectorAll(".theme-toggle");
     toggles.forEach(btn => btn.addEventListener("click", toggleTheme));
+    
+    // Typing Animation logic
+    const typingElement = document.getElementById("hero-typing-text");
+    if (typingElement) {
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+        
+        async function runTyping() {
+            const firstStr = "OnSight.";
+            // Type "OnSight."
+            for (let i = 0; i <= firstStr.length; i++) {
+                typingElement.textContent = firstStr.substring(0, i);
+                await sleep(80);
+            }
+            
+            // Wait to be read
+            await sleep(1200);
+            
+            // Backspace it
+            for (let i = firstStr.length; i >= 0; i--) {
+                typingElement.textContent = firstStr.substring(0, i);
+                await sleep(50);
+            }
+            
+            // Pause before next text
+            await sleep(600);
+            
+            // Type "Redefining the "
+            const finalStrStart = "Redefining the ";
+            for (let i = 0; i <= finalStrStart.length; i++) {
+                typingElement.textContent = finalStrStart.substring(0, i);
+                await sleep(60);
+            }
+            
+            // Inject animated colored span for "Exam Experience"
+            const span = document.createElement("span");
+            span.style.color = "var(--primary)";
+            typingElement.appendChild(span);
+            
+            const highlightStr = "Exam Experience";
+            for (let i = 0; i <= highlightStr.length; i++) {
+                span.textContent = highlightStr.substring(0, i);
+                await sleep(60);
+            }
+            
+            // Add the final '.' dot outside of the span
+            const dotNode = document.createTextNode("");
+            typingElement.appendChild(dotNode);
+            const finalStrEnd = ".";
+            for (let i = 0; i <= finalStrEnd.length; i++) {
+                dotNode.nodeValue = finalStrEnd.substring(0, i);
+                await sleep(60);
+            }
+        }
+        
+        runTyping();
+    }
 });
 
 /**

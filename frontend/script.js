@@ -184,3 +184,242 @@ if (navDashboard && navExams && viewDashboard && viewExams) {
         viewDashboard.style.display = "none";
     });
 }
+
+// ------------------------------------------------------------------
+// TEACHER DASHBOARD LOGIC
+// ------------------------------------------------------------------
+const navTeacherDashboard = document.getElementById("nav-dashboard");
+const navTeacherExams = document.getElementById("nav-exams");
+const viewTeacherDashboard = document.getElementById("view-dashboard");
+const viewTeacherExams = document.getElementById("view-exams");
+
+let currentParsedQuestions = [];
+
+if (navTeacherDashboard && navTeacherExams && viewTeacherDashboard && viewTeacherExams) {
+    navTeacherDashboard.addEventListener("click", (e) => {
+        e.preventDefault();
+        navTeacherDashboard.classList.add("active");
+        navTeacherExams.classList.remove("active");
+        viewTeacherDashboard.style.display = "block";
+        viewTeacherExams.style.display = "none";
+        loadStudentAttempts();
+    });
+
+    navTeacherExams.addEventListener("click", (e) => {
+        e.preventDefault();
+        navTeacherExams.classList.add("active");
+        navTeacherDashboard.classList.remove("active");
+        viewTeacherExams.style.display = "block";
+        viewTeacherDashboard.style.display = "none";
+        loadTeacherExams();
+    });
+
+    // Load initial data based on active tab
+    if(navTeacherDashboard.classList.contains("active")) {
+        loadStudentAttempts();
+    } else {
+        loadTeacherExams();
+    }
+}
+
+async function loadStudentAttempts() {
+    const container = document.getElementById("attempts-list-container");
+    if (!container) return;
+
+    container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);">Loading attempts...</div>`;
+
+    const { ok, data } = await apiFetch("/api/teacher/exams/attempts", { method: "GET" });
+    
+    if (ok && data.attempts) {
+        if(data.attempts.length === 0) {
+            container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);">No student attempts found.</div>`;
+            return;
+        }
+
+        container.innerHTML = data.attempts.map(att => `
+            <div class="table-row">
+                <div class="flex-col">
+                    <p class="text-main">${att.studentId ? (att.studentId.username || att.studentId.email) : 'Unknown Student'}</p>
+                    <p class="text-sub">${new Date(att.attemptDate).toLocaleDateString()}</p>
+                </div>
+                <div>
+                    <span class="badge secondary">${att.examId ? att.examId.title : 'Deleted Exam'}</span>
+                </div>
+                <div>
+                    <span style="font-weight: bold; color: var(--primary);">${att.score} / ${att.totalQuestions || '-'}</span>
+                </div>
+                <div>
+                    <span class="badge ${att.status === 'published' ? 'primary' : 'secondary'}">
+                        ${att.status.toUpperCase()}
+                    </span>
+                </div>
+            </div>
+        `).join('');
+    } else {
+        container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--error);">Error loading attempts.</div>`;
+    }
+}
+
+async function loadTeacherExams() {
+    const container = document.getElementById("exams-list-container");
+    if (!container) return;
+
+    container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);">Loading exams...</div>`;
+
+    const { ok, data } = await apiFetch("/api/teacher/exams", { method: "GET" });
+    
+    if (ok && data.exams) {
+        if(data.exams.length === 0) {
+            container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);">No exams created yet.</div>`;
+            return;
+        }
+
+        container.innerHTML = data.exams.map(exam => `
+            <div class="table-row">
+                <div class="flex-col">
+                    <p class="text-main">${exam.title}</p>
+                    <p class="text-sub">${exam.questions.length} Questions</p>
+                </div>
+                <div>
+                    ${new Date(exam.createdAt).toLocaleDateString()}
+                </div>
+                <div>
+                    <span class="badge ${exam.isPublished ? 'primary' : 'secondary'}">${exam.isPublished ? 'PUBLISHED' : 'DRAFT'}</span>
+                </div>
+                <div class="actions-flex">
+                    ${!exam.isPublished ? `<button onclick="publishExam('${exam._id}')" title="Publish Results"><span class="material-symbols-outlined">campaign</span></button>` : ''}
+                </div>
+            </div>
+        `).join('');
+    } else {
+        container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--error);">Error loading exams.</div>`;
+    }
+}
+
+async function publishExam(examId) {
+    if(!confirm("Are you sure you want to publish the results for this exam?")) return;
+    
+    const { ok, data } = await apiFetch(`/api/teacher/exams/${examId}/publish-results`, { method: "POST" });
+    if(ok) {
+        alert("Results published!");
+        loadTeacherExams(); // reload
+    } else {
+        alert(data.error || "Failed to publish results.");
+    }
+}
+
+// Upload PDF Logic
+const uploadPdfForm = document.getElementById("uploadPdfForm");
+if (uploadPdfForm) {
+    uploadPdfForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        const fileInput = document.getElementById("examPdfFile");
+        const statusBox = document.getElementById("upload-status");
+        
+        if (fileInput.files.length === 0) return;
+        
+        statusBox.style.display = "block";
+        statusBox.style.color = "var(--primary)";
+        statusBox.textContent = "Parsing PDF... Contacting AI system...";
+        
+        const formData = new FormData();
+        formData.append("pdf", fileInput.files[0]);
+        
+        try {
+            // Using a raw fetch because apiFetch assumes JSON body right now
+            const fetchConfig = {
+                method: "POST",
+                body: formData,
+                credentials: "include"
+            };
+            
+            const response = await fetch(API_BASE + "/api/teacher/exams/upload", fetchConfig);
+            const data = await response.json();
+            
+            if (response.ok) {
+                statusBox.textContent = "Extraction successful! Please review below.";
+                currentParsedQuestions = data.questions;
+                renderReviewPane();
+            } else {
+                statusBox.style.color = "var(--error)";
+                statusBox.textContent = data.error || "Failed to parse PDF.";
+            }
+        } catch (err) {
+            statusBox.style.color = "var(--error)";
+            statusBox.textContent = "Network error during upload.";
+        }
+    });
+}
+
+function renderReviewPane() {
+    const reviewPane = document.getElementById("review-pane");
+    const questionsContainer = document.getElementById("extracted-questions-container");
+    
+    reviewPane.style.display = "block";
+    questionsContainer.innerHTML = "";
+    
+    currentParsedQuestions.forEach((q, index) => {
+        questionsContainer.innerHTML += `
+            <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border);">
+                <p><strong>Q${index + 1}:</strong> ${q.questionText}</p>
+                <ul style="list-style-type: none; padding-left: 1rem;">
+                    ${q.options.map(opt => `<li>- ${opt}</li>`).join('')}
+                </ul>
+                <p style="color: var(--primary);"><strong>Answer:</strong> ${q.correctAnswer}</p>
+                ${q.explanation ? `<p style="font-size: 0.9em; color: var(--text-muted);">${q.explanation}</p>` : ''}
+            </div>
+        `;
+    });
+}
+
+const saveExamBtn = document.getElementById("saveExamBtn");
+if (saveExamBtn) {
+    saveExamBtn.addEventListener("click", async () => {
+        const title = document.getElementById("newExamTitle").value;
+        const description = document.getElementById("newExamDesc").value;
+        
+        if(!title) {
+            alert("Title is required!");
+            return;
+        }
+        
+        saveExamBtn.textContent = "Saving...";
+        saveExamBtn.disabled = true;
+        
+        const { ok, data } = await apiFetch("/api/teacher/exams", {
+            method: "POST",
+            body: JSON.stringify({
+                title,
+                description,
+                questions: currentParsedQuestions
+            })
+        });
+        
+        saveExamBtn.textContent = "Save Exam";
+        saveExamBtn.disabled = false;
+        
+        if (ok) {
+            alert("Exam saved successfully!");
+            document.getElementById("uploadPdfForm").reset();
+            document.getElementById("review-pane").style.display = "none";
+            document.getElementById("upload-status").style.display = "none";
+            document.getElementById("newExamTitle").value = "";
+            document.getElementById("newExamDesc").value = "";
+            currentParsedQuestions = [];
+            loadTeacherExams();
+        } else {
+            alert(data.error || "Failed to save exam.");
+        }
+    });
+}
+
+const cancelExamBtn = document.getElementById("cancelExamBtn");
+if (cancelExamBtn) {
+    cancelExamBtn.addEventListener("click", () => {
+        document.getElementById("review-pane").style.display = "none";
+        document.getElementById("uploadPdfForm").reset();
+        document.getElementById("upload-status").style.display = "none";
+        currentParsedQuestions = [];
+    });
+}

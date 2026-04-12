@@ -19,11 +19,11 @@
         </div>
         
         <div class="nav-menu">
-            <a href="#" class="nav-link active">
+            <a href="#" class="nav-link active" id="nav-dashboard">
                 <span class="material-symbols-outlined">dashboard</span>
                 Dashboard
             </a>
-            <a href="#" class="nav-link">
+            <a href="#" class="nav-link" id="nav-exams">
                 <span class="material-symbols-outlined">quiz</span>
                 Manage Exams
             </a>
@@ -58,61 +58,71 @@
         </header>
 
         <div class="page-container">
-            <section>
+            <!-- DASHBOARD VIEW: Student Attempts -->
+            <section id="view-dashboard">
                 <div class="flex-col gap-2" style="margin-bottom: 2rem;">
-                    <h2 class="hero-title editorial-text"><span class="gradient-text">Exam Questions Management</span></h2>
-                    <p class="hero-subtitle">Securely draft, edit, and organize multiple-choice questions for the upcoming semester's examinations.</p>
+                    <h2 class="hero-title editorial-text"><span class="gradient-text">Student Attempts Overview</span></h2>
+                    <p class="hero-subtitle">Monitor students who have attempted the published test papers.</p>
                 </div>
-
+                
                 <div class="table-container">
                     <div class="table-header">
-                        <div>Question Snippet</div>
-                        <div>Category/Subject</div>
-                        <div>Difficulty</div>
+                        <div>Student</div>
+                        <div>Exam</div>
+                        <div>Score</div>
+                        <div>Status</div>
+                    </div>
+                    <div id="attempts-list-container">
+                        <!-- Dynamic content loaded via JS -->
+                        <div style="padding: 2rem; text-align: center; color: var(--text-muted);">Loading attempts...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- MANAGE EXAMS VIEW -->
+            <section id="view-exams" style="display: none;">
+                <div class="flex-col gap-2" style="margin-bottom: 2rem;">
+                    <h2 class="hero-title editorial-text"><span class="gradient-text">Create and Manage Exams</span></h2>
+                    <p class="hero-subtitle">Upload PDFs to generate tests, publish results, and securely review AI-extracted question papers.</p>
+                </div>
+
+                <!-- Create Exam via PDF Upload -->
+                <div style="margin-bottom: 2rem; background: var(--surface); padding: 1.5rem; border-radius: var(--radius-lg); border: 1px solid var(--border);">
+                    <h3>Upload Test PDF</h3>
+                    <form id="uploadPdfForm" style="display: flex; gap: 1rem; align-items: center; margin-top: 1rem;">
+                        <input type="file" id="examPdfFile" accept=".pdf" required style="padding: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-color);"/>
+                        <button type="submit" class="btn-primary">Parse PDF</button>
+                    </form>
+                    <div id="upload-status" style="margin-top: 1rem; color: var(--primary); display: none;">Parsing... this may take a moment.</div>
+                </div>
+
+                <!-- Review Pane (Hidden Initially) -->
+                <div id="review-pane" style="display: none; margin-bottom: 2rem; background: var(--surface); padding: 1.5rem; border-radius: var(--radius-lg); border: 1px solid var(--border);">
+                    <h3>Review Extracted Questions</h3>
+                    <input type="text" id="newExamTitle" placeholder="Exam Title" required style="width: 100%; padding: 0.8rem; margin-bottom: 1rem; background: var(--bg-color); border: 1px solid var(--border); color: var(--text-color); border-radius: var(--radius-sm);"/>
+                    <input type="text" id="newExamDesc" placeholder="Description (Optional)" style="width: 100%; padding: 0.8rem; margin-bottom: 1rem; background: var(--bg-color); border: 1px solid var(--border); color: var(--text-color); border-radius: var(--radius-sm);"/>
+                    
+                    <div id="extracted-questions-container" style="max-height: 400px; overflow-y: auto; margin-bottom: 1rem; padding: 1rem; background: var(--bg-color); border: 1px solid var(--border); border-radius: var(--radius-sm);">
+                        <!-- Extracted questions rendered here -->
+                    </div>
+                    
+                    <button id="saveExamBtn" class="btn-primary">Save Exam</button>
+                    <button id="cancelExamBtn" style="padding: 0.5rem 1rem; background: transparent; color: var(--text-color); border: 1px solid var(--border); border-radius: var(--radius-full); cursor: pointer;">Cancel</button>
+                </div>
+
+                <!-- Existing Exams List -->
+                <div class="table-container">
+                    <div class="table-header">
+                        <div>Exam Title</div>
+                        <div>Date</div>
+                        <div>Status</div>
                         <div class="col-right">Actions</div>
                     </div>
                     
-                    <div class="table-row">
-                        <div class="flex-col">
-                            <p class="text-main text-trunc">Which property ensures that a database transaction is all-or-nothing?</p>
-                            <p class="text-sub text-trunc">Ans: Atomicity</p>
-                        </div>
-                        <div>
-                            <span class="badge secondary">Systems Arch</span>
-                        </div>
-                        <div>
-                            <div class="diff-dots">
-                                <div class="dot"></div>
-                                <span class="diff-label">EASY</span>
-                            </div>
-                        </div>
-                        <div class="actions-flex">
-                            <button><span class="material-symbols-outlined">edit</span></button>
-                            <button><span class="material-symbols-outlined">delete</span></button>
-                        </div>
+                    <div id="exams-list-container">
+                         <!-- Dynamic content loaded via JS -->
+                         <div style="padding: 2rem; text-align: center; color: var(--text-muted);">Loading exams...</div>
                     </div>
-
-                    <div class="table-row">
-                        <div class="flex-col">
-                            <p class="text-main text-trunc">In graph theory, what is a completely connected graph called?</p>
-                            <p class="text-sub text-trunc">Ans: Complete graph (or Clique)</p>
-                        </div>
-                        <div>
-                            <span class="badge secondary">Discrete Math</span>
-                        </div>
-                        <div>
-                            <div class="diff-dots">
-                                <div class="dot"></div>
-                                <div class="dot"></div>
-                                <span class="diff-label">MEDIUM</span>
-                            </div>
-                        </div>
-                        <div class="actions-flex">
-                            <button><span class="material-symbols-outlined">edit</span></button>
-                            <button><span class="material-symbols-outlined">delete</span></button>
-                        </div>
-                    </div>
-
                 </div>
             </section>
         </div>

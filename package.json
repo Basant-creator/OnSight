@@ -19,14 +19,20 @@
   },
   "homepage": "https://github.com/Basant-creator/Practice_Exam_Platform#readme",
   "dependencies": {
+    "@google/genai": "^1.49.0",
+    "axios": "^1.15.0",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.2",
+    "form-data": "^4.0.5",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^9.3.0",
+    "multer": "^2.1.1",
+    "pdf-parse": "^1.1.1",
+    "pdfkit": "^0.18.0",
     "zod": "^4.3.6"
   }
 }

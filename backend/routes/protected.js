@@ -4,6 +4,10 @@ const { authorizeRole, authorizePermission } = require("../middleware/role.middl
 const validate = require("../middleware/validate.middleware");
 const { createUserSchema } = require("../validations/user.validation");
 const userController = require("../controllers/user.controller");
+const examController = require("../controllers/exam.controller");
+const multer = require("multer");
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 const router = express.Router();
 
@@ -30,6 +34,50 @@ router.get("/teacher/questions", authenticateToken, authorizeRole("teacher"), (r
     user: req.user,
   });
 });
+
+// Teacher Exam Management Endpoints
+router.post(
+  "/teacher/exams/upload",
+  authenticateToken,
+  authorizeRole("teacher"),
+  upload.single("pdf"),
+  examController.uploadAndParsePDF
+);
+
+router.post(
+  "/teacher/exams",
+  authenticateToken,
+  authorizeRole("teacher"),
+  examController.createExam
+);
+
+router.get(
+  "/teacher/exams",
+  authenticateToken,
+  authorizeRole("teacher"),
+  examController.getTeacherExams
+);
+
+router.get(
+  "/teacher/exams/attempts",
+  authenticateToken,
+  authorizeRole("teacher"),
+  examController.getAllAttemptsForTeacher
+);
+
+router.get(
+  "/teacher/exams/:id/attempts",
+  authenticateToken,
+  authorizeRole("teacher"),
+  examController.getExamAttempts
+);
+
+router.post(
+  "/teacher/exams/:id/publish-results",
+  authenticateToken,
+  authorizeRole("teacher"),
+  examController.publishResults
+);
 
 // Example: Student-only endpoint (Teacher and Admin will also have access)
 router.get("/student/exams", authenticateToken, authorizeRole("student"), (req, res) => {

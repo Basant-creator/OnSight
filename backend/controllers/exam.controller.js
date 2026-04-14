@@ -1,7 +1,6 @@
 const Exam = require("../models/Exam");
 const Result = require("../models/Result");
 const User = require("../models/User");
-const pdfParse = require("pdf-parse");
 const { GoogleGenAI } = require("@google/genai");
 
 // Setup GenAI
@@ -10,12 +9,17 @@ if (process.env.GEMINI_API_KEY) {
   ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 }
 
-const extractQuestionsViaGemini = async (text) => {
+const extractQuestionsViaGemini = async (pdfBuffer) => {
   if (!ai) {
     throw new Error("GEMINI_API_KEY is not configured in the environment.");
   }
+
+  if (!pdfBuffer || !Buffer.isBuffer(pdfBuffer) || pdfBuffer.length === 0) {
+    throw new Error("Uploaded PDF is empty or invalid.");
+  }
+
   const prompt = `
-Extract multiple choice questions from the following text and format them as a JSON array. 
+Extract multiple choice questions from this PDF and format them as a JSON array.
 The output MUST be a valid JSON array of objects. Do not include markdown formatting or backticks around the json.
 Format of each object:
 {
@@ -24,23 +28,80 @@ Format of each object:
   "correctAnswer": "Option B",
   "explanation": "Optional explanation if present, otherwise empty string."
 }
-
-Text:
-${text}
 `;
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: prompt,
-  });
-  
-  let resultText = response.text;
-  if(resultText.startsWith("```json")) {
-      resultText = resultText.replace(/^```json/, "").replace(/```$/, "").trim();
-  } else if (resultText.startsWith("```")) {
-      resultText = resultText.replace(/^```/, "").replace(/```$/, "").trim();
+
+  const pdfBase64 = pdfBuffer.toString("base64");
+
+  const models = ["gemini-2.5-flash", "gemini-2.0-flash"];
+  let response;
+  let lastError;
+
+  for (const model of models) {
+    try {
+      response = await ai.models.generateContent({
+        model,
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                inlineData: {
+                  mimeType: "application/pdf",
+                  data: pdfBase64,
+                },
+              },
+              {
+                text: prompt,
+              },
+            ],
+          },
+        ],
+      });
+      break;
+    } catch (error) {
+      lastError = error;
+      const errMsg = String(error && error.message ? error.message : error);
+      const isUnavailable = errMsg.includes("503") || errMsg.includes("UNAVAILABLE");
+      if (!isUnavailable) {
+        throw error;
+      }
+    }
   }
 
-  return JSON.parse(resultText);
+  if (!response) {
+    throw lastError || new Error("Failed to get response from Gemini models.");
+  }
+  
+  let resultText = (response.text || "").trim();
+
+  // Handle malformed fences seen in model output, e.g. ``json ... ``.
+  resultText = resultText
+    .replace(/^`{2,}json\s*/i, "")
+    .replace(/^`{2,}\s*/i, "")
+    .replace(/\s*`{2,}$/i, "")
+    .trim();
+
+  // Remove markdown code fences even when model returns extra whitespace/newlines.
+  const fencedJsonMatch = resultText.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  if (fencedJsonMatch) {
+    resultText = fencedJsonMatch[1].trim();
+  }
+
+  try {
+    const parsed = JSON.parse(resultText);
+    if (!Array.isArray(parsed)) {
+      throw new Error("Gemini output is not an array.");
+    }
+
+    return parsed.map((item) => ({
+      questionText: item.questionText || item.question || "",
+      options: Array.isArray(item.options) ? item.options : [],
+      correctAnswer: item.correctAnswer || item.correct_answer || item.answer || "",
+      explanation: item.explanation || "",
+    }));
+  } catch (parseError) {
+    throw new Error(`Gemini returned non-JSON output: ${parseError.message}`);
+  }
 };
 
 exports.uploadAndParsePDF = async (req, res) => {
@@ -48,13 +109,11 @@ exports.uploadAndParsePDF = async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ error: "No PDF file uploaded" });
     }
-    
+
     const dataBuffer = req.file.buffer;
-    const pdfData = await pdfParse(dataBuffer);
-    const text = pdfData.text;
 
     try {
-      const formattedQuestions = await extractQuestionsViaGemini(text);
+      const formattedQuestions = await extractQuestionsViaGemini(dataBuffer);
       return res.status(200).json({ 
         message: "PDF parsed and extracted successfully", 
         questions: formattedQuestions 

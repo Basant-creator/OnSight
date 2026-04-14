@@ -16,7 +16,7 @@ const manageRefreshTokens = async (user, newRefreshToken) => {
 };
 
 
-const loginUser = async ({ email, password }, ipAddress) => {
+const loginUser = async ({ email, password, role }, ipAddress) => {
   const normalizedEmail = String(email).trim().toLowerCase();
   const user = await User.findOne({ email: normalizedEmail });
 
@@ -33,6 +33,13 @@ const loginUser = async ({ email, password }, ipAddress) => {
     await logAudit({ userId: user._id, action: "LOGIN_FAILED", description: "Invalid password", endpoint: "/auth/login", ipAddress });
     const error = new Error("Invalid email or password");
     error.status = 401;
+    throw error;
+  }
+  
+  if (role && user.role !== role) {
+    await logAudit({ userId: user._id, action: "LOGIN_FAILED", description: `Role mismatch: expected ${role}, actual ${user.role}`, endpoint: "/auth/login", ipAddress });
+    const error = new Error("Incorrect role selected");
+    error.status = 403;
     throw error;
   }
 

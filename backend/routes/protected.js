@@ -7,7 +7,27 @@ const userController = require("../controllers/user.controller");
 const examController = require("../controllers/exam.controller");
 const multer = require("multer");
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === "application/pdf") {
+      cb(null, true);
+    } else {
+      cb(new Error("Only PDF files are allowed"));
+    }
+  }
+});
+
+const uploadMiddleware = (req, res, next) => {
+  const multerUpload = upload.single("pdf");
+  multerUpload(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+    next();
+  });
+};
 
 const router = express.Router();
 
@@ -40,7 +60,7 @@ router.post(
   "/teacher/exams/upload",
   authenticateToken,
   authorizeRole("teacher"),
-  upload.single("pdf"),
+  uploadMiddleware,
   examController.uploadAndParsePDF
 );
 
@@ -49,6 +69,13 @@ router.post(
   authenticateToken,
   authorizeRole("teacher"),
   examController.createExam
+);
+
+router.put(
+  "/teacher/exams/:id/rename",
+  authenticateToken,
+  authorizeRole("teacher"),
+  examController.renameExam
 );
 
 router.get(

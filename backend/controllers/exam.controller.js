@@ -61,8 +61,11 @@ Format of each object:
     } catch (error) {
       lastError = error;
       const errMsg = String(error && error.message ? error.message : error);
-      const isUnavailable = errMsg.includes("503") || errMsg.includes("UNAVAILABLE");
-      if (!isUnavailable) {
+      const isTransientError = errMsg.includes("503") || errMsg.includes("UNAVAILABLE") || 
+                               errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED") || 
+                               errMsg.includes("500") || errMsg.includes("INTERNAL") || 
+                               errMsg.includes("502") || errMsg.includes("BAD_GATEWAY");
+      if (!isTransientError) {
         throw error;
       }
     }
@@ -136,7 +139,7 @@ exports.createExam = async (req, res) => {
       title,
       description,
       questions,
-      createdBy: req.user.userId
+      createdBy: req.user.id
     });
 
     await exam.save();
@@ -149,7 +152,7 @@ exports.createExam = async (req, res) => {
 
 exports.getTeacherExams = async (req, res) => {
   try {
-    const exams = await Exam.find({ createdBy: req.user.userId }).sort({ createdAt: -1 });
+    const exams = await Exam.find({ createdBy: req.user.id }).sort({ createdAt: -1 });
     return res.status(200).json({ exams });
   } catch (error) {
     console.error("Get Exams Error:", error);
@@ -170,7 +173,7 @@ exports.getExamAttempts = async (req, res) => {
 
 exports.getAllAttemptsForTeacher = async (req, res) => {
     try {
-        const exams = await Exam.find({ createdBy: req.user.userId }).select('_id title');
+        const exams = await Exam.find({ createdBy: req.user.id }).select('_id title');
         const examIds = exams.map(e => e._id);
         const attempts = await Result.find({ examId: { $in: examIds } })
             .populate("studentId", "username email")
@@ -188,7 +191,7 @@ exports.publishResults = async (req, res) => {
     const { id } = req.params;
     
     // Check if exam belongs to teacher
-    const exam = await Exam.findOne({ _id: id, createdBy: req.user.userId });
+    const exam = await Exam.findOne({ _id: id, createdBy: req.user.id });
     if (!exam) {
       return res.status(404).json({ error: "Exam not found or unauthorized" });
     }
@@ -205,5 +208,29 @@ exports.publishResults = async (req, res) => {
   } catch (error) {
     console.error("Publish Results Error:", error);
     res.status(500).json({ error: "Error publishing results" });
+  }
+};
+
+exports.renameExam = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title } = req.body;
+
+    if (!title || title.trim() === "") {
+      return res.status(400).json({ error: "Title is required" });
+    }
+
+    const exam = await Exam.findOne({ _id: id, createdBy: req.user.id });
+    if (!exam) {
+      return res.status(404).json({ error: "Exam not found or unauthorized" });
+    }
+
+    exam.title = title.trim();
+    await exam.save();
+
+    return res.status(200).json({ message: "Exam renamed successfully", exam });
+  } catch (error) {
+    console.error("Rename Exam Error:", error);
+    res.status(500).json({ error: "Error renaming exam" });
   }
 };

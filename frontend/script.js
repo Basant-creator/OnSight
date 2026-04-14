@@ -88,13 +88,19 @@ document.addEventListener("DOMContentLoaded", () => {
  * CRITICAL: Automatically injects credentials: "include" to transmit the httpOnly Cookie to backend!
  */
 async function apiFetch(endpoint, options = {}) {
+    const token = localStorage.getItem("onsight_token");
+    const headers = {
+        "Content-Type": "application/json",
+        ...options.headers,
+    };
+    if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const config = {
         ...options,
         credentials: "include", // This is the engine ensuring cookies jump via CORS
-        headers: {
-            "Content-Type": "application/json",
-            ...options.headers,
-        },
+        headers
     };
 
     try {
@@ -117,6 +123,8 @@ if (loginForm) {
         
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
+        const roleSelect = document.getElementById("role");
+        const role = roleSelect ? roleSelect.value : null;
         const errorBox = document.getElementById("auth-error-box");
         
         // Lock UI
@@ -125,12 +133,13 @@ if (loginForm) {
 
         const { ok, data } = await apiFetch("/auth/login", {
             method: "POST",
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ email, password, role })
         });
 
         if (ok) {
             // Store non-sensitive user metadata so the UI recognizes who is logged in
             localStorage.setItem("onsight_user", JSON.stringify(data.user));
+            if (data.token) localStorage.setItem("onsight_token", data.token);
             
             // Intelligent Routing Logic
             const role = data.user.role;
@@ -210,9 +219,10 @@ async function handleLogout(e) {
     
     // Purge local cache
     localStorage.removeItem("onsight_user");
+    localStorage.removeItem("onsight_token");
     
     // Sever tie
-    window.location.href = "login.html";
+    window.location.href = "index.html#login-section";
 }
 
 // ------------------------------------------------------------------
@@ -343,6 +353,7 @@ async function loadTeacherExams() {
                     <span class="badge ${exam.isPublished ? 'primary' : 'secondary'}">${exam.isPublished ? 'PUBLISHED' : 'DRAFT'}</span>
                 </div>
                 <div class="actions-flex">
+                    <button onclick="promptRenameExam('${exam._id}', '${exam.title.replace(/'/g, "\\'")}')" title="Rename Exam"><span class="material-symbols-outlined">edit</span></button>
                     ${!exam.isPublished ? `<button onclick="publishExam('${exam._id}')" title="Publish Results"><span class="material-symbols-outlined">campaign</span></button>` : ''}
                 </div>
             </div>
@@ -364,6 +375,23 @@ async function publishExam(examId) {
     }
 }
 
+async function promptRenameExam(examId, currentTitle) {
+    const newTitle = prompt("Enter new title for the exam:", currentTitle);
+    if (!newTitle || newTitle.trim() === "" || newTitle === currentTitle) return;
+
+    const { ok, data } = await apiFetch(`/api/teacher/exams/${examId}/rename`, { 
+        method: "PUT",
+        body: JSON.stringify({ title: newTitle.trim() })
+    });
+    
+    if (ok) {
+        alert("Exam renamed successfully!");
+        loadTeacherExams(); // reload
+    } else {
+        alert(data.error || "Failed to rename exam.");
+    }
+}
+
 // Upload PDF Logic
 const uploadPdfForm = document.getElementById("uploadPdfForm");
 if (uploadPdfForm) {
@@ -375,19 +403,38 @@ if (uploadPdfForm) {
         
         if (fileInput.files.length === 0) return;
         
+        const file = fileInput.files[0];
+        if (file.type !== "application/pdf") {
+            statusBox.style.display = "block";
+            statusBox.style.color = "var(--error)";
+            statusBox.textContent = "Error: Only PDF files are allowed.";
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            statusBox.style.display = "block";
+            statusBox.style.color = "var(--error)";
+            statusBox.textContent = "Error: File size cannot exceed 5MB.";
+            return;
+        }
+
         statusBox.style.display = "block";
         statusBox.style.color = "var(--primary)";
         statusBox.textContent = "Parsing PDF... Contacting AI system...";
         
         const formData = new FormData();
-        formData.append("pdf", fileInput.files[0]);
+        formData.append("pdf", file);
         
         try {
+            const token = localStorage.getItem("onsight_token");
+            const headers = {};
+            if (token) headers["Authorization"] = `Bearer ${token}`;
+
             // Using a raw fetch because apiFetch assumes JSON body right now
             const fetchConfig = {
                 method: "POST",
                 body: formData,
-                credentials: "include"
+                credentials: "include",
+                headers
             };
             
             const response = await fetch(API_BASE + "/api/teacher/exams/upload", fetchConfig);

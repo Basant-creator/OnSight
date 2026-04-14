@@ -114,6 +114,25 @@ async function apiFetch(endpoint, options = {}) {
 }
 
 // ------------------------------------------------------------------
+// LOGIN DROPDOWN LOGIC
+// ------------------------------------------------------------------
+const loginDropdownBtn = document.getElementById("login-dropdown-btn");
+const loginDropdown = document.getElementById("login-dropdown");
+
+if (loginDropdownBtn && loginDropdown) {
+    loginDropdownBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        loginDropdown.style.display = loginDropdown.style.display === "none" ? "block" : "none";
+    });
+
+    document.addEventListener("click", (e) => {
+        if (!loginDropdown.contains(e.target) && e.target !== loginDropdownBtn) {
+            loginDropdown.style.display = "none";
+        }
+    });
+}
+
+// ------------------------------------------------------------------
 // GATEWAY LOGIC (login.html)
 // ------------------------------------------------------------------
 const loginForm = document.getElementById("loginForm");

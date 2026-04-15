@@ -318,3 +318,254 @@ exports.getStudentExams = async (req, res) => {
     res.status(500).json({ error: "Error fetching student exams" });
   }
 };
+
+// Get exam data for attempt (safe - no correct answers exposed)
+exports.getExamForAttempt = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const studentId = req.user.id;
+
+    const exam = await Exam.findById(id);
+    if (!exam) {
+      return res.status(404).json({ error: "Exam not found" });
+    }
+
+    // Check if exam is scheduled and within the allowed window
+    const now = new Date();
+    const scheduledAt = new Date(exam.scheduledAt);
+    const endTime = new Date(scheduledAt.getTime() + exam.durationMinutes * 60 * 1000);
+
+    // Allow starting 10 minutes before scheduled time
+    const startWindow = new Date(scheduledAt.getTime() - 10 * 60 * 1000);
+
+    if (exam.status !== "scheduled") {
+      return res.status(400).json({ error: "Exam is not available for attempt" });
+    }
+
+    if (now < startWindow) {
+      return res.status(400).json({ error: "Exam has not started yet" });
+    }
+
+    if (now > endTime) {
+      return res.status(400).json({ error: "Exam time has expired" });
+    }
+
+    // Check for duplicate attempt
+    const existingAttempt = await Result.findOne({ examId: id, studentId });
+    if (existingAttempt) {
+      return res.status(400).json({ error: "You have already attempted this exam" });
+    }
+
+    // Create a new attempt record with startedAt
+    const newAttempt = new Result({
+      studentId,
+      examId: id,
+      score: 0,
+      totalQuestions: exam.questions.length,
+      status: "attempted",
+      startedAt: now,
+      responses: []
+    });
+    await newAttempt.save();
+
+    // Return exam data without correct answers
+    const safeQuestions = exam.questions.map((q, index) => ({
+      questionIndex: index,
+      questionText: q.questionText,
+      options: q.options
+    }));
+
+    return res.status(200).json({
+      attemptId: newAttempt._id,
+      exam: {
+        _id: exam._id,
+        title: exam.title,
+        description: exam.description,
+        durationMinutes: exam.durationMinutes,
+        scheduledAt: exam.scheduledAt,
+        totalQuestions: exam.questions.length
+      },
+      questions: safeQuestions
+    });
+  } catch (error) {
+    console.error("Get Exam For Attempt Error:", error);
+    res.status(500).json({ error: "Error fetching exam for attempt" });
+  }
+};
+
+// Submit exam attempt
+exports.submitAttempt = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { answers } = req.body; // Array of { questionIndex, selectedAnswer }
+    const studentId = req.user.id;
+
+    const exam = await Exam.findById(id);
+    if (!exam) {
+      return res.status(404).json({ error: "Exam not found" });
+    }
+
+    // Find the existing attempt
+    const attempt = await Result.findOne({ examId: id, studentId });
+    if (!attempt) {
+      return res.status(400).json({ error: "No active attempt found. Please start the exam first." });
+    }
+
+    if (attempt.submittedAt) {
+      return res.status(400).json({ error: "You have already submitted this exam" });
+    }
+
+    // Validate time window
+    const now = new Date();
+    const scheduledAt = new Date(exam.scheduledAt);
+    const endTime = new Date(scheduledAt.getTime() + exam.durationMinutes * 60 * 1000);
+
+    if (now > endTime) {
+      return res.status(400).json({ error: "Exam time has expired" });
+    }
+
+    // Evaluate answers
+    const responses = [];
+    let correctCount = 0;
+
+    exam.questions.forEach((question, index) => {
+      const answer = answers.find(a => a.questionIndex === index);
+      const selectedAnswer = answer ? answer.selectedAnswer : null;
+      const isCorrect = selectedAnswer === question.correctAnswer;
+
+      if (isCorrect) correctCount++;
+
+      responses.push({
+        questionIndex: index,
+        questionText: question.questionText,
+        selectedAnswer,
+        correctAnswer: question.correctAnswer,
+        isCorrect
+      });
+    });
+
+    const score = correctCount;
+    const totalQuestions = exam.questions.length;
+
+    // Update the attempt
+    attempt.score = score;
+    attempt.totalQuestions = totalQuestions;
+    attempt.responses = responses;
+    attempt.submittedAt = now;
+    await attempt.save();
+
+    // Return response respecting publish status
+    const isPublished = exam.isPublished || attempt.status === "published";
+
+    return res.status(200).json({
+      message: "Exam submitted successfully",
+      attempt: {
+        _id: attempt._id,
+        examId: attempt.examId,
+        score: isPublished ? score : null,
+        totalQuestions,
+        status: attempt.status,
+        submittedAt: attempt.submittedAt,
+        // Only show detailed responses if published
+        responses: isPublished ? responses.map(r => ({
+          questionIndex: r.questionIndex,
+          questionText: r.questionText,
+          selectedAnswer: r.selectedAnswer,
+          isCorrect: r.isCorrect
+        })) : null
+      }
+    });
+  } catch (error) {
+    console.error("Submit Attempt Error:", error);
+    res.status(500).json({ error: "Error submitting attempt" });
+  }
+};
+
+// Get student's own attempts/history
+exports.getStudentAttempts = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+
+    const attempts = await Result.find({ studentId })
+      .populate("examId", "title description durationMinutes isPublished scheduledAt")
+      .sort({ attemptDate: -1 });
+
+    const formattedAttempts = attempts.map(attempt => {
+      const exam = attempt.examId;
+      const isPublished = exam && exam.isPublished;
+
+      return {
+        _id: attempt._id,
+        exam: exam ? {
+          _id: exam._id,
+          title: exam.title,
+          description: exam.description,
+          durationMinutes: exam.durationMinutes,
+          scheduledAt: exam.scheduledAt
+        } : null,
+        score: isPublished ? attempt.score : null,
+        totalQuestions: attempt.totalQuestions,
+        status: attempt.status,
+        attemptDate: attempt.attemptDate,
+        submittedAt: attempt.submittedAt,
+        // Only include responses if published
+        responses: isPublished ? attempt.responses.map(r => ({
+          questionIndex: r.questionIndex,
+          questionText: r.questionText,
+          selectedAnswer: r.selectedAnswer,
+          isCorrect: r.isCorrect
+        })) : null
+      };
+    });
+
+    return res.status(200).json({ attempts: formattedAttempts });
+  } catch (error) {
+    console.error("Get Student Attempts Error:", error);
+    res.status(500).json({ error: "Error fetching attempts" });
+  }
+};
+
+// Get specific attempt details
+exports.getAttemptDetails = async (req, res) => {
+  try {
+    const { attemptId } = req.params;
+    const studentId = req.user.id;
+
+    const attempt = await Result.findOne({ _id: attemptId, studentId })
+      .populate("examId", "title description durationMinutes isPublished scheduledAt");
+
+    if (!attempt) {
+      return res.status(404).json({ error: "Attempt not found" });
+    }
+
+    const exam = attempt.examId;
+    const isPublished = exam && exam.isPublished;
+
+    return res.status(200).json({
+      attempt: {
+        _id: attempt._id,
+        exam: exam ? {
+          _id: exam._id,
+          title: exam.title,
+          description: exam.description,
+          durationMinutes: exam.durationMinutes,
+          scheduledAt: exam.scheduledAt
+        } : null,
+        score: isPublished ? attempt.score : null,
+        totalQuestions: attempt.totalQuestions,
+        status: attempt.status,
+        attemptDate: attempt.attemptDate,
+        submittedAt: attempt.submittedAt,
+        responses: isPublished ? attempt.responses.map(r => ({
+          questionIndex: r.questionIndex,
+          questionText: r.questionText,
+          selectedAnswer: r.selectedAnswer,
+          isCorrect: r.isCorrect
+        })) : null
+      }
+    });
+  } catch (error) {
+    console.error("Get Attempt Details Error:", error);
+    res.status(500).json({ error: "Error fetching attempt details" });
+  }
+};

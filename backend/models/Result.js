@@ -1,5 +1,28 @@
 const mongoose = require("mongoose");
 
+const responseSchema = new mongoose.Schema({
+  questionIndex: {
+    type: Number,
+    required: true
+  },
+  questionText: {
+    type: String,
+    required: true
+  },
+  selectedAnswer: {
+    type: String,
+    default: null
+  },
+  correctAnswer: {
+    type: String,
+    required: true
+  },
+  isCorrect: {
+    type: Boolean,
+    required: true
+  }
+}, { _id: false });
+
 const resultSchema = new mongoose.Schema({
   studentId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -29,6 +52,18 @@ const resultSchema = new mongoose.Schema({
   attemptDate: {
     type: Date,
     default: Date.now
+  },
+  responses: {
+    type: [responseSchema],
+    default: []
+  },
+  startedAt: {
+    type: Date,
+    default: null
+  },
+  submittedAt: {
+    type: Date,
+    default: null
   }
 }, { timestamps: true });
 

@@ -121,6 +121,35 @@ router.get(
   examController.getStudentExams
 );
 
+// Student Exam Attempt Endpoints
+router.get(
+  "/student/exams/:id/attempt",
+  authenticateToken,
+  authorizeRole("student"),
+  examController.getExamForAttempt
+);
+
+router.post(
+  "/student/exams/:id/submit",
+  authenticateToken,
+  authorizeRole("student"),
+  examController.submitAttempt
+);
+
+router.get(
+  "/student/attempts",
+  authenticateToken,
+  authorizeRole("student"),
+  examController.getStudentAttempts
+);
+
+router.get(
+  "/student/attempts/:attemptId",
+  authenticateToken,
+  authorizeRole("student"),
+  examController.getAttemptDetails
+);
+
 // Example: Permission-based endpoint (Only roles with "view:analytics" like Teacher or Admin can access)
 router.get("/analytics", authenticateToken, authorizePermission("view:analytics"), (req, res) => {
   return res.status(200).json({

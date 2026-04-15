@@ -330,7 +330,7 @@ async function loadStudentUpcomingExams() {
                 <h3 class="card-title">${exam.title}</h3>
                 <p class="card-desc">Scheduled for: ${scheduledAt.toLocaleDateString()} at ${scheduledAt.toLocaleTimeString()}</p>
                 <p style="font-size: 0.85em; font-weight: bold; color: var(--primary); margin-bottom: 1rem;">${countdownLabel}</p>
-                <button class="btn-card ${btnClass}" ${!canStart ? 'onclick="alert(\\'Exam starts soon!\\')"' : ''}>
+                <button class="btn-card ${btnClass}" ${!canStart ? 'onclick="alert(\'Exam starts soon!\')"' : `onclick="startExam('${exam._id}')"`}>
                     ${btnText}
                     <span class="material-symbols-outlined">${btnIcon}</span>
                 </button>
@@ -731,5 +731,339 @@ if (cancelExamBtn) {
         document.getElementById("uploadPdfForm").reset();
         document.getElementById("upload-status").style.display = "none";
         currentParsedQuestions = [];
+    });
+}
+
+// ------------------------------------------------------------------
+// STUDENT EXAM ATTEMPT FLOW
+// ------------------------------------------------------------------
+
+let currentAttemptData = null;
+let currentAnswers = [];
+
+// Global function to start an exam (called from HTML)
+window.startExam = async function(examId) {
+    const container = document.getElementById("upcoming-exams-container");
+    if (container) {
+        container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);">Starting exam...</div>`;
+    }
+
+    const { ok, data } = await apiFetch(`/api/student/exams/${examId}/attempt`, { method: "GET" });
+
+    if (ok) {
+        currentAttemptData = data;
+        currentAnswers = data.questions.map(q => ({ questionIndex: q.questionIndex, selectedAnswer: null }));
+        renderExamInterface(data);
+    } else {
+        alert(data.error || "Failed to start exam.");
+        loadStudentUpcomingExams();
+    }
+};
+
+function renderExamInterface(data) {
+    const container = document.getElementById("view-dashboard");
+    if (!container) return;
+
+    const { exam, questions, attemptId } = data;
+    const endTime = new Date(new Date().getTime() + exam.durationMinutes * 60 * 1000);
+
+    let questionsHtml = questions.map((q, idx) => `
+        <div class="exam-question" style="margin-bottom: 2rem; padding: 1.5rem; background: var(--surface); border: 1px solid var(--surface-border); border-radius: 0.75rem;">
+            <h4 style="margin-bottom: 1rem; color: var(--on-surface);">Q${idx + 1}. ${escapeHtml(q.questionText)}</h4>
+            <div class="options" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                ${q.options.map((opt, optIdx) => `
+                    <label class="option-label" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; background: var(--surface-container); border: 2px solid var(--surface-border); border-radius: 0.5rem; cursor: pointer; transition: all 0.2s;">
+                        <input type="radio" name="question-${q.questionIndex}" value="${escapeHtml(opt)}" onchange="updateAnswer(${q.questionIndex}, '${escapeHtml(opt)}')" style="width: 1.25rem; height: 1.25rem; accent-color: var(--primary);">
+                        <span style="color: var(--on-surface);">${escapeHtml(opt)}</span>
+                    </label>
+                `).join('')}
+            </div>
+        </div>
+    `).join('');
+
+    container.innerHTML = `
+        <div class="exam-container" style="max-width: 800px; margin: 0 auto; padding: 1rem;">
+            <div class="exam-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding: 1rem; background: var(--primary-container); border-radius: 0.75rem;">
+                <div>
+                    <h2 style="color: var(--on-surface);">${escapeHtml(exam.title)}</h2>
+                    <p style="color: var(--on-surface-variant);">${exam.totalQuestions} Questions | ${exam.durationMinutes} Minutes</p>
+                </div>
+                <div class="exam-timer" style="font-size: 1.5rem; font-weight: bold; color: var(--primary);" id="exam-timer">
+                    ${exam.durationMinutes}:00
+                </div>
+            </div>
+            <form id="exam-form" onsubmit="event.preventDefault(); submitExam('${exam._id}');">
+                ${questionsHtml}
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="submit" class="btn-card primary" style="flex: 1;">
+                        Submit Exam
+                        <span class="material-symbols-outlined">check_circle</span>
+                    </button>
+                    <button type="button" class="btn-card secondary" onclick="cancelExam()" style="flex: 1;">
+                        Cancel
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    // Start countdown timer
+    startExamTimer(endTime);
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Global function to update answer selection
+window.updateAnswer = function(questionIndex, selectedAnswer) {
+    const answer = currentAnswers.find(a => a.questionIndex === questionIndex);
+    if (answer) {
+        answer.selectedAnswer = selectedAnswer;
+    }
+};
+
+function startExamTimer(endTime) {
+    const timerEl = document.getElementById("exam-timer");
+    if (!timerEl) return;
+
+    const timerInterval = setInterval(() => {
+        const now = new Date();
+        const diff = endTime - now;
+
+        if (diff <= 0) {
+            clearInterval(timerInterval);
+            timerEl.textContent = "00:00";
+            alert("Time's up! Your exam will be submitted automatically.");
+            if (currentAttemptData) {
+                submitExam(currentAttemptData.exam._id);
+            }
+            return;
+        }
+
+        const minutes = Math.floor(diff / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+        timerEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+        // Warning color when less than 5 minutes
+        if (minutes < 5) {
+            timerEl.style.color = "var(--error)";
+        }
+    }, 1000);
+
+    // Store interval ID to clear it on submit/cancel
+    window.currentExamTimer = timerInterval;
+}
+
+// Global function to submit exam
+window.submitExam = async function(examId) {
+    // Validate all questions are answered
+    const unanswered = currentAnswers.filter(a => !a.selectedAnswer);
+    if (unanswered.length > 0) {
+        if (!confirm(`You have ${unanswered.length} unanswered question(s). Are you sure you want to submit?`)) {
+            return;
+        }
+    }
+
+    if (window.currentExamTimer) {
+        clearInterval(window.currentExamTimer);
+    }
+
+    const container = document.querySelector('.exam-container');
+    if (container) {
+        container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);">Submitting your exam...</div>`;
+    }
+
+    const { ok, data } = await apiFetch(`/api/student/exams/${examId}/submit`, {
+        method: "POST",
+        body: JSON.stringify({ answers: currentAnswers })
+    });
+
+    if (ok) {
+        renderExamResults(data.attempt);
+    } else {
+        alert(data.error || "Failed to submit exam.");
+        returnToDashboard();
+    }
+};
+
+// Global function to cancel exam
+window.cancelExam = function() {
+    if (!confirm("Are you sure you want to cancel? Your progress will not be saved.")) {
+        return;
+    }
+    if (window.currentExamTimer) {
+        clearInterval(window.currentExamTimer);
+    }
+    currentAttemptData = null;
+    currentAnswers = [];
+    returnToDashboard();
+};
+
+function returnToDashboard() {
+    const container = document.getElementById("view-dashboard");
+    if (container) {
+        // Reload the dashboard content
+        location.reload();
+    }
+}
+
+function renderExamResults(attempt) {
+    const container = document.getElementById("view-dashboard");
+    if (!container) return;
+
+    const isPublished = attempt.status === "published";
+    const scoreDisplay = isPublished
+        ? `<div style="font-size: 3rem; font-weight: bold; color: var(--primary);">${attempt.score} / ${attempt.totalQuestions}</div>`
+        : `<div style="font-size: 1.25rem; color: var(--text-muted);">Results not yet published</div>`;
+
+    const percentage = isPublished && attempt.totalQuestions > 0
+        ? Math.round((attempt.score / attempt.totalQuestions) * 100)
+        : null;
+
+    container.innerHTML = `
+        <div class="exam-results" style="max-width: 600px; margin: 0 auto; padding: 2rem; text-align: center;">
+            <div style="margin-bottom: 2rem;">
+                <span class="material-symbols-outlined" style="font-size: 4rem; color: var(--primary);">${isPublished ? 'check_circle' : 'pending'}</span>
+            </div>
+            <h2 style="margin-bottom: 1rem; color: var(--on-surface);">Exam Submitted!</h2>
+            <p style="color: var(--on-surface-variant); margin-bottom: 2rem;">Your answers have been recorded.</p>
+            <div style="background: var(--surface); border: 1px solid var(--surface-border); border-radius: 1rem; padding: 2rem; margin-bottom: 2rem;">
+                <h3 style="margin-bottom: 1rem; color: var(--on-surface);">Your Score</h3>
+                ${scoreDisplay}
+                ${percentage !== null ? `<p style="margin-top: 0.5rem; color: var(--on-surface-variant);">${percentage}% Correct</p>` : ''}
+                <span class="badge ${isPublished ? 'primary' : 'secondary'}" style="margin-top: 1rem; display: inline-block;">
+                    ${attempt.status.toUpperCase()}
+                </span>
+            </div>
+            <button class="btn-card primary" onclick="returnToDashboard()">
+                Return to Dashboard
+                <span class="material-symbols-outlined">home</span>
+            </button>
+        </div>
+    `;
+}
+
+// Load student attempts for the Exams tab
+async function loadStudentAttemptsHistory() {
+    const container = document.getElementById("student-attempts-container");
+    if (!container) return;
+
+    container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);">Loading your attempts...</div>`;
+
+    const { ok, data } = await apiFetch("/api/student/attempts", { method: "GET" });
+
+    if (ok && data.attempts) {
+        if (data.attempts.length === 0) {
+            container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);">You haven't attempted any exams yet.</div>`;
+            return;
+        }
+
+        container.innerHTML = data.attempts.map(attempt => {
+            const exam = attempt.exam;
+            const isPublished = attempt.status === "published";
+            const scoreDisplay = isPublished
+                ? `Score: ${attempt.score}/${attempt.totalQuestions}`
+                : "Results pending";
+            const statusBadge = isPublished
+                ? `<span class="badge" style="background:#2a2b3b; color: #a4e5c3;">Published</span>`
+                : `<span class="badge secondary">Pending</span>`;
+
+            return `
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon ${isPublished ? 'secondary' : 'primary'}">
+                            <span class="material-symbols-outlined">${isPublished ? 'done_all' : 'pending'}</span>
+                        </div>
+                        ${statusBadge}
+                    </div>
+                    <h3 class="card-title">${exam ? exam.title : 'Deleted Exam'}</h3>
+                    <p class="card-desc">${scoreDisplay} | Attempted on ${new Date(attempt.attemptDate).toLocaleDateString()}</p>
+                    <button class="btn-card" style="background:var(--surface-container-high); color:var(--on-surface-variant)" ${!isPublished ? 'disabled' : ''} onclick="viewAttemptDetails('${attempt._id}')">
+                        ${isPublished ? 'Review Results' : 'Results Pending'}
+                        <span class="material-symbols-outlined">${isPublished ? 'visibility' : 'lock'}</span>
+                    </button>
+                </div>
+            `;
+        }).join('');
+    } else {
+        container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--error);">Error loading attempts.</div>`;
+    }
+}
+
+// Global function to view attempt details
+window.viewAttemptDetails = async function(attemptId) {
+    const { ok, data } = await apiFetch(`/api/student/attempts/${attemptId}`, { method: "GET" });
+
+    if (ok && data.attempt) {
+        renderAttemptDetailView(data.attempt);
+    } else {
+        alert("Failed to load attempt details.");
+    }
+};
+
+function renderAttemptDetailView(attempt) {
+    const container = document.getElementById("view-exams");
+    if (!container) return;
+
+    const responses = attempt.responses || [];
+    let responsesHtml = '';
+
+    if (responses.length > 0) {
+        responsesHtml = responses.map((r, idx) => `
+            <div class="response-item" style="margin-bottom: 1.5rem; padding: 1rem; background: var(--surface); border: 1px solid var(--surface-border); border-radius: 0.5rem; ${r.isCorrect ? 'border-left: 4px solid var(--success, #4caf50);' : 'border-left: 4px solid var(--error);'}">
+                <p style="font-weight: bold; margin-bottom: 0.5rem;">Q${idx + 1}. ${escapeHtml(r.questionText)}</p>
+                <p style="color: ${r.isCorrect ? 'var(--success, #4caf50)' : 'var(--error)'};">
+                    Your answer: ${escapeHtml(r.selectedAnswer) || 'Not answered'} ${r.isCorrect ? '(Correct)' : '(Incorrect)'}
+                </p>
+            </div>
+        `).join('');
+    }
+
+    const percentage = attempt.totalQuestions > 0
+        ? Math.round((attempt.score / attempt.totalQuestions) * 100)
+        : 0;
+
+    container.innerHTML = `
+        <div class="attempt-detail" style="max-width: 800px; margin: 0 auto; padding: 1rem;">
+            <div style="margin-bottom: 2rem;">
+                <button class="btn-card secondary" onclick="showExamsView()">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                    Back to Attempts
+                </button>
+            </div>
+            <div style="background: var(--surface); border: 1px solid var(--surface-border); border-radius: 1rem; padding: 2rem; margin-bottom: 2rem; text-align: center;">
+                <h2>${attempt.exam ? attempt.exam.title : 'Deleted Exam'}</h2>
+                <div style="font-size: 3rem; font-weight: bold; color: var(--primary); margin: 1rem 0;">
+                    ${attempt.score} / ${attempt.totalQuestions}
+                </div>
+                <p style="color: var(--on-surface-variant);">${percentage}% Correct</p>
+                <span class="badge primary" style="margin-top: 1rem; display: inline-block;">
+                    ${attempt.status.toUpperCase()}
+                </span>
+            </div>
+            <h3 style="margin-bottom: 1rem;">Question Review</h3>
+            ${responsesHtml || '<p style="color: var(--text-muted);">No response details available.</p>'}
+        </div>
+    `;
+}
+
+// Global function to show exams view
+window.showExamsView = function() {
+    const navExams = document.getElementById("nav-exams");
+    if (navExams) {
+        navExams.click();
+    }
+};
+
+// Update the nav click handlers to load attempts
+const originalNavExamsClick = navExams ? navExams.onclick : null;
+if (navExams) {
+    navExams.addEventListener("click", (e) => {
+        loadStudentAttemptsHistory();
     });
 }

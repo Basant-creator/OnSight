@@ -292,12 +292,13 @@ async function loadStudentUpcomingExams() {
             const scheduledAt = new Date(exam.scheduledAt);
             const now = new Date();
             const diffMs = scheduledAt - now;
+            const durationMins = Number(exam.durationMinutes) || 60;
             
             let countdownLabel = "";
             let canStart = false;
+            const startWindowMs = 10 * 60 * 1000; // 10 minutes before start
             
-            if (diffMs <= 0) {
-                // Exam is starting or already started
+            if (diffMs <= startWindowMs) {
                 countdownLabel = "Available Now!";
                 canStart = true;
             } else {
@@ -324,7 +325,7 @@ async function loadStudentUpcomingExams() {
                     <div class="card-icon ${canStart ? 'primary' : 'secondary'}">
                         <span class="material-symbols-outlined material-fill">event</span>
                     </div>
-                    <span class="badge secondary">${exam.durationMinutes ? exam.durationMinutes + ' Mins' : '60 Mins'}</span>
+                    <span class="badge secondary">${durationMins} Mins</span>
                 </div>
                 <h3 class="card-title">${exam.title}</h3>
                 <p class="card-desc">Scheduled for: ${scheduledAt.toLocaleDateString()} at ${scheduledAt.toLocaleTimeString()}</p>
@@ -406,7 +407,7 @@ async function loadStudentAttempts() {
                 </div>
                 <div>
                     <span class="badge ${att.status === 'published' ? 'primary' : 'secondary'}">
-                        ${att.status.toUpperCase()}
+                        ${(att.status || 'attempted').toUpperCase()}
                     </span>
                 </div>
             </div>
@@ -437,10 +438,15 @@ async function loadTeacherExams() {
             let scheduleUI = '';
             if (exam.status !== 'scheduled' && exam.status !== 'closed') {
                 scheduleUI = `
-                <div style="display:flex; gap:0.5rem; align-items:center; margin-top: 0.5rem;">
-                    <input type="date" id="date-${exam._id}" style="padding:0.2rem; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border); border-radius:var(--radius-sm);" />
-                    <input type="time" id="time-${exam._id}" style="padding:0.2rem; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border); border-radius:var(--radius-sm);" />
-                    <button class="btn-primary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="scheduleExam('${exam._id}')">Schedule</button>
+                <div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:0.5rem;">
+                    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                        <input type="date" id="date-${exam._id}" style="padding:0.35rem; background:var(--surface); color:var(--on-surface); border:1px solid var(--surface-border); border-radius:0.375rem;" />
+                        <input type="time" id="time-${exam._id}" style="padding:0.35rem; background:var(--surface); color:var(--on-surface); border:1px solid var(--surface-border); border-radius:0.375rem;" />
+                        <input type="number" min="15" max="480" step="5" value="${exam.durationMinutes || 60}" id="duration-${exam._id}" style="width:84px; padding:0.35rem; background:var(--surface); color:var(--on-surface); border:1px solid var(--surface-border); border-radius:0.375rem;" title="Duration (minutes)" />
+                        <button class="btn-primary" style="width:auto; padding:0.35rem 0.65rem; font-size:0.8rem;" onclick="scheduleExam('${exam._id}')">Schedule Exam</button>
+                    </div>
+                    <div class="schedule-calendar" id="calendar-${exam._id}"></div>
+                    <div id="schedule-msg-${exam._id}" style="font-size:0.8rem; color:var(--on-surface-variant);"></div>
                 </div>`;
             } else if (exam.status === 'scheduled') {
                 scheduleUI = `<div style="margin-top: 0.5rem;"><span style="font-size:0.9em; color:var(--primary);">Scheduled: ${new Date(exam.scheduledAt).toLocaleString()}</span></div>`;
@@ -466,38 +472,101 @@ async function loadTeacherExams() {
             </div>
             `;
         }).join('');
+
+        data.exams.forEach((exam) => {
+            if (exam.status !== "scheduled" && exam.status !== "closed") {
+                renderMiniCalendar(exam._id);
+            }
+        });
     } else {
         container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--error);">Error loading exams.</div>`;
     }
 }
 
+function renderMiniCalendar(examId) {
+    const calendarHost = document.getElementById(`calendar-${examId}`);
+    const dateInput = document.getElementById(`date-${examId}`);
+    if (!calendarHost || !dateInput) return;
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const todayDateStr = now.toISOString().slice(0, 10);
+
+    const weekday = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+    let html = `<div style="display:grid; grid-template-columns:repeat(7, minmax(24px, 1fr)); gap:4px; margin-top:2px;">`;
+    html += weekday.map((d) => `<div style="font-size:0.7rem; text-align:center; color:var(--on-surface-variant);">${d}</div>`).join("");
+    for (let i = 0; i < firstDay; i += 1) {
+        html += `<div></div>`;
+    }
+    for (let day = 1; day <= daysInMonth; day += 1) {
+        const dateObj = new Date(currentYear, currentMonth, day);
+        const dateStr = dateObj.toISOString().slice(0, 10);
+        const disabled = dateStr < todayDateStr;
+        html += `<button type="button" data-date="${dateStr}" ${disabled ? "disabled" : ""} style="padding:4px; border:1px solid var(--surface-border); border-radius:6px; font-size:0.72rem; color:${disabled ? "var(--on-surface-variant)" : "var(--on-surface)"}; background:${disabled ? "var(--surface-container)" : "var(--surface)"};">${day}</button>`;
+    }
+    html += `</div>`;
+    calendarHost.innerHTML = html;
+
+    calendarHost.querySelectorAll("button[data-date]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            dateInput.value = btn.dataset.date || "";
+            calendarHost.querySelectorAll("button[data-date]").forEach((b) => {
+                b.style.borderColor = "var(--surface-border)";
+                b.style.background = "var(--surface)";
+            });
+            btn.style.borderColor = "var(--primary)";
+            btn.style.background = "var(--primary-container)";
+        });
+    });
+}
+
 async function scheduleExam(examId) {
-    const dateInput = document.getElementById(`date-${examId}`).value;
-    const timeInput = document.getElementById(`time-${examId}`).value;
+    const dateField = document.getElementById(`date-${examId}`);
+    const timeField = document.getElementById(`time-${examId}`);
+    const durationField = document.getElementById(`duration-${examId}`);
+    const msgBox = document.getElementById(`schedule-msg-${examId}`);
+    const dateInput = dateField ? dateField.value : "";
+    const timeInput = timeField ? timeField.value : "";
     
     if (!dateInput || !timeInput) {
-        alert("Please select both date and time to schedule the exam.");
+        if (msgBox) {
+            msgBox.style.color = "var(--error)";
+            msgBox.textContent = "Please select both date and time.";
+        }
         return;
     }
     
-    // Combine date and time
     const scheduledAt = new Date(`${dateInput}T${timeInput}`);
+    const durationMinutes = durationField ? Number(durationField.value) : 60;
     
     if (scheduledAt <= new Date()) {
-        alert("Schedule date must be in the future.");
+        if (msgBox) {
+            msgBox.style.color = "var(--error)";
+            msgBox.textContent = "Schedule date must be in the future.";
+        }
         return;
     }
     
     const { ok, data } = await apiFetch(`/api/teacher/exams/${examId}/schedule`, {
         method: "PATCH",
-        body: JSON.stringify({ scheduledAt: scheduledAt.toISOString() })
+        body: JSON.stringify({ scheduledAt: scheduledAt.toISOString(), durationMinutes })
     });
     
     if (ok) {
-        alert("Exam scheduled successfully!");
-        loadTeacherExams(); // reload
+        if (msgBox) {
+            msgBox.style.color = "var(--primary)";
+            msgBox.textContent = `Scheduled for ${scheduledAt.toLocaleString()}.`;
+        }
+        loadTeacherExams();
+        loadStudentUpcomingExams();
     } else {
-        alert(data.error || "Failed to schedule exam.");
+        if (msgBox) {
+            msgBox.style.color = "var(--error)";
+            msgBox.textContent = data.error || "Failed to schedule exam.";
+        }
     }
 }
 

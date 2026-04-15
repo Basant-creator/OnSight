@@ -109,7 +109,7 @@ router.post(
 router.patch(
   "/teacher/exams/:id/schedule",
   authenticateToken,
-  authorizeRole("teacher"),
+  authorizeRole("teacher", "sub_admin", "head_admin"),
   examController.scheduleExam
 );
 

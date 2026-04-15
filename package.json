@@ -4,7 +4,7 @@
   "description": "Making a small version of Exam platform with OAuth, User, Admin, Database for Practice Questions and User details",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node backend/test_exam_scheduling.js"
   },
   "repository": {
     "type": "git",

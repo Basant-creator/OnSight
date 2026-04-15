@@ -9,6 +9,30 @@ if (process.env.GEMINI_API_KEY) {
   ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 }
 
+const ISO_DATE_TIME_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/;
+const ADMIN_ROLES = new Set(["head_admin", "sub_admin"]);
+
+const parseAndValidateScheduleDate = (scheduledAt) => {
+  if (!scheduledAt || typeof scheduledAt !== "string") {
+    return { error: "scheduledAt is required" };
+  }
+
+  if (!ISO_DATE_TIME_REGEX.test(scheduledAt)) {
+    return { error: "scheduledAt must be a valid ISO date-time string" };
+  }
+
+  const scheduledDate = new Date(scheduledAt);
+  if (Number.isNaN(scheduledDate.getTime())) {
+    return { error: "scheduledAt must be a valid ISO date-time string" };
+  }
+
+  if (scheduledDate <= new Date()) {
+    return { error: "scheduledAt must be in the future" };
+  }
+
+  return { scheduledDate };
+};
+
 const extractQuestionsViaGemini = async (pdfBuffer) => {
   if (!ai) {
     throw new Error("GEMINI_API_KEY is not configured in the environment.");
@@ -139,7 +163,8 @@ exports.createExam = async (req, res) => {
       title,
       description,
       questions,
-      createdBy: req.user.id
+      createdBy: req.user.id,
+      status: "draft"
     });
 
     await exam.save();
@@ -240,27 +265,34 @@ exports.scheduleExam = async (req, res) => {
     const { id } = req.params;
     const { scheduledAt, durationMinutes } = req.body;
 
-    if (!scheduledAt) {
-      return res.status(400).json({ error: "scheduledAt is required" });
+    if (!["teacher", ...ADMIN_ROLES].includes(req.user.role)) {
+      return res.status(403).json({ error: "Unauthorized role for exam scheduling" });
     }
 
-    const scheduledDate = new Date(scheduledAt);
-    if (isNaN(scheduledDate.getTime())) {
-      return res.status(400).json({ error: "Invalid date format" });
+    const { scheduledDate, error: scheduleError } = parseAndValidateScheduleDate(scheduledAt);
+    if (scheduleError) {
+      return res.status(400).json({ error: scheduleError });
     }
 
-    if (scheduledDate <= new Date()) {
-      return res.status(400).json({ error: "Scheduled date must be in the future" });
+    if (durationMinutes !== undefined) {
+      const parsedDuration = Number(durationMinutes);
+      if (!Number.isInteger(parsedDuration) || parsedDuration < 15 || parsedDuration > 480) {
+        return res.status(400).json({ error: "durationMinutes must be an integer between 15 and 480" });
+      }
     }
 
-    const exam = await Exam.findOne({ _id: id, createdBy: req.user.id });
+    const query = { _id: id };
+    if (req.user.role === "teacher") {
+      query.createdBy = req.user.id;
+    }
+    const exam = await Exam.findOne(query);
     if (!exam) {
-      return res.status(404).json({ error: "Exam not found or unauthorized" });
+      return res.status(404).json({ error: "Exam not found" });
     }
 
     exam.scheduledAt = scheduledDate;
-    if (durationMinutes) {
-      exam.durationMinutes = durationMinutes;
+    if (durationMinutes !== undefined) {
+      exam.durationMinutes = Number(durationMinutes);
     }
     exam.status = "scheduled";
     

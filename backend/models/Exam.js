@@ -26,7 +26,10 @@ const examSchema = new mongoose.Schema({
     default: false
   },
   scheduledAt: {
-    type: Date
+    type: Date,
+    required: function requiredScheduledAt() {
+      return this.status === "scheduled";
+    }
   },
   durationMinutes: {
     type: Number,

@@ -106,13 +106,20 @@ router.post(
   examController.publishResults
 );
 
+router.patch(
+  "/teacher/exams/:id/schedule",
+  authenticateToken,
+  authorizeRole("teacher"),
+  examController.scheduleExam
+);
+
 // Example: Student-only endpoint (Teacher and Admin will also have access)
-router.get("/student/exams", authenticateToken, authorizeRole("student"), (req, res) => {
-  return res.status(200).json({
-    message: "Available exams for student",
-    user: req.user,
-  });
-});
+router.get(
+  "/student/exams",
+  authenticateToken,
+  authorizeRole("student"),
+  examController.getStudentExams
+);
 
 // Example: Permission-based endpoint (Only roles with "view:analytics" like Teacher or Admin can access)
 router.get("/analytics", authenticateToken, authorizePermission("view:analytics"), (req, res) => {

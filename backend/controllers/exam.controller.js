@@ -234,3 +234,55 @@ exports.renameExam = async (req, res) => {
     res.status(500).json({ error: "Error renaming exam" });
   }
 };
+
+exports.scheduleExam = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { scheduledAt, durationMinutes } = req.body;
+
+    if (!scheduledAt) {
+      return res.status(400).json({ error: "scheduledAt is required" });
+    }
+
+    const scheduledDate = new Date(scheduledAt);
+    if (isNaN(scheduledDate.getTime())) {
+      return res.status(400).json({ error: "Invalid date format" });
+    }
+
+    if (scheduledDate <= new Date()) {
+      return res.status(400).json({ error: "Scheduled date must be in the future" });
+    }
+
+    const exam = await Exam.findOne({ _id: id, createdBy: req.user.id });
+    if (!exam) {
+      return res.status(404).json({ error: "Exam not found or unauthorized" });
+    }
+
+    exam.scheduledAt = scheduledDate;
+    if (durationMinutes) {
+      exam.durationMinutes = durationMinutes;
+    }
+    exam.status = "scheduled";
+    
+    await exam.save();
+    return res.status(200).json({ message: "Exam scheduled successfully", exam });
+  } catch (error) {
+    console.error("Schedule Exam Error:", error);
+    res.status(500).json({ error: "Error scheduling exam" });
+  }
+};
+
+exports.getStudentExams = async (req, res) => {
+  try {
+    const now = new Date();
+    const exams = await Exam.find({
+      status: "scheduled",
+      scheduledAt: { $gte: now }
+    }).sort({ scheduledAt: 1 }).select("_id title description scheduledAt durationMinutes status");
+
+    return res.status(200).json({ exams });
+  } catch (error) {
+    console.error("Get Student Exams Error:", error);
+    res.status(500).json({ error: "Error fetching student exams" });
+  }
+};

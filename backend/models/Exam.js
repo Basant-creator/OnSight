@@ -24,6 +24,18 @@ const examSchema = new mongoose.Schema({
   isPublished: {
     type: Boolean,
     default: false
+  },
+  scheduledAt: {
+    type: Date
+  },
+  durationMinutes: {
+    type: Number,
+    default: 60
+  },
+  status: {
+    type: String,
+    enum: ["draft", "scheduled", "closed"],
+    default: "draft"
   }
 }, { timestamps: true });
 

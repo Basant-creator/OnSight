@@ -259,6 +259,7 @@ if (navDashboard && navExams && viewDashboard && viewExams) {
         navExams.classList.remove("active");
         viewDashboard.style.display = "block";
         viewExams.style.display = "none";
+        loadStudentUpcomingExams();
     });
 
     navExams.addEventListener("click", (e) => {
@@ -268,6 +269,76 @@ if (navDashboard && navExams && viewDashboard && viewExams) {
         viewExams.style.display = "block";
         viewDashboard.style.display = "none";
     });
+    
+    // Load student data initially
+    loadStudentUpcomingExams();
+}
+
+async function loadStudentUpcomingExams() {
+    const container = document.getElementById("upcoming-exams-container");
+    if (!container) return;
+
+    container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);">Loading upcoming exams...</div>`;
+
+    const { ok, data } = await apiFetch("/api/student/exams", { method: "GET" });
+    
+    if (ok && data.exams) {
+        if(data.exams.length === 0) {
+            container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);">No upcoming exams scheduled. Enjoy your free time!</div>`;
+            return;
+        }
+
+        container.innerHTML = data.exams.map(exam => {
+            const scheduledAt = new Date(exam.scheduledAt);
+            const now = new Date();
+            const diffMs = scheduledAt - now;
+            
+            let countdownLabel = "";
+            let canStart = false;
+            
+            if (diffMs <= 0) {
+                // Exam is starting or already started
+                countdownLabel = "Available Now!";
+                canStart = true;
+            } else {
+                const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                
+                if (diffDays > 0) {
+                    countdownLabel = `Starts in ${diffDays} day(s)`;
+                } else if (diffHours > 0) {
+                    countdownLabel = `Starts in ${diffHours} hour(s)`;
+                } else {
+                    const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                    countdownLabel = `Starts in ${diffMins} min(s)`;
+                }
+            }
+            
+            const btnClass = canStart ? "primary" : "secondary";
+            const btnText = canStart ? "Start Exam" : "View Details";
+            const btnIcon = canStart ? "rocket_launch" : "visibility";
+            
+            return `
+            <div class="card ${canStart ? 'highlight' : ''}">
+                <div class="card-header">
+                    <div class="card-icon ${canStart ? 'primary' : 'secondary'}">
+                        <span class="material-symbols-outlined material-fill">event</span>
+                    </div>
+                    <span class="badge secondary">${exam.durationMinutes ? exam.durationMinutes + ' Mins' : '60 Mins'}</span>
+                </div>
+                <h3 class="card-title">${exam.title}</h3>
+                <p class="card-desc">Scheduled for: ${scheduledAt.toLocaleDateString()} at ${scheduledAt.toLocaleTimeString()}</p>
+                <p style="font-size: 0.85em; font-weight: bold; color: var(--primary); margin-bottom: 1rem;">${countdownLabel}</p>
+                <button class="btn-card ${btnClass}" ${!canStart ? 'onclick="alert(\\'Exam starts soon!\\')"' : ''}>
+                    ${btnText}
+                    <span class="material-symbols-outlined">${btnIcon}</span>
+                </button>
+            </div>
+            `;
+        }).join('');
+    } else {
+        container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--error);">Error loading exams.</div>`;
+    }
 }
 
 // ------------------------------------------------------------------
@@ -359,26 +430,74 @@ async function loadTeacherExams() {
             return;
         }
 
-        container.innerHTML = data.exams.map(exam => `
-            <div class="table-row">
-                <div class="flex-col">
+        container.innerHTML = data.exams.map(exam => {
+            let statusBadgeClass = exam.status === 'scheduled' ? 'primary' : 'secondary';
+            let statusText = exam.status ? exam.status.toUpperCase() : (exam.isPublished ? 'PUBLISHED' : 'DRAFT');
+            
+            let scheduleUI = '';
+            if (exam.status !== 'scheduled' && exam.status !== 'closed') {
+                scheduleUI = `
+                <div style="display:flex; gap:0.5rem; align-items:center; margin-top: 0.5rem;">
+                    <input type="date" id="date-${exam._id}" style="padding:0.2rem; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border); border-radius:var(--radius-sm);" />
+                    <input type="time" id="time-${exam._id}" style="padding:0.2rem; background:var(--bg-color); color:var(--text-color); border:1px solid var(--border); border-radius:var(--radius-sm);" />
+                    <button class="btn-primary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="scheduleExam('${exam._id}')">Schedule</button>
+                </div>`;
+            } else if (exam.status === 'scheduled') {
+                scheduleUI = `<div style="margin-top: 0.5rem;"><span style="font-size:0.9em; color:var(--primary);">Scheduled: ${new Date(exam.scheduledAt).toLocaleString()}</span></div>`;
+            }
+
+            return `
+            <div class="table-row" style="flex-wrap: wrap;">
+                <div class="flex-col" style="flex:1; min-width: 250px;">
                     <p class="text-main">${exam.title}</p>
-                    <p class="text-sub">${exam.questions.length} Questions</p>
+                    <p class="text-sub">${exam.questions ? exam.questions.length : 0} Questions</p>
+                    ${scheduleUI}
                 </div>
                 <div>
                     ${new Date(exam.createdAt).toLocaleDateString()}
                 </div>
                 <div>
-                    <span class="badge ${exam.isPublished ? 'primary' : 'secondary'}">${exam.isPublished ? 'PUBLISHED' : 'DRAFT'}</span>
+                    <span class="badge ${statusBadgeClass}">${statusText}</span>
                 </div>
                 <div class="actions-flex">
                     <button onclick="promptRenameExam('${exam._id}', '${exam.title.replace(/'/g, "\\'")}')" title="Rename Exam"><span class="material-symbols-outlined">edit</span></button>
                     ${!exam.isPublished ? `<button onclick="publishExam('${exam._id}')" title="Publish Results"><span class="material-symbols-outlined">campaign</span></button>` : ''}
                 </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
     } else {
         container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--error);">Error loading exams.</div>`;
+    }
+}
+
+async function scheduleExam(examId) {
+    const dateInput = document.getElementById(`date-${examId}`).value;
+    const timeInput = document.getElementById(`time-${examId}`).value;
+    
+    if (!dateInput || !timeInput) {
+        alert("Please select both date and time to schedule the exam.");
+        return;
+    }
+    
+    // Combine date and time
+    const scheduledAt = new Date(`${dateInput}T${timeInput}`);
+    
+    if (scheduledAt <= new Date()) {
+        alert("Schedule date must be in the future.");
+        return;
+    }
+    
+    const { ok, data } = await apiFetch(`/api/teacher/exams/${examId}/schedule`, {
+        method: "PATCH",
+        body: JSON.stringify({ scheduledAt: scheduledAt.toISOString() })
+    });
+    
+    if (ok) {
+        alert("Exam scheduled successfully!");
+        loadTeacherExams(); // reload
+    } else {
+        alert(data.error || "Failed to schedule exam.");
     }
 }
 

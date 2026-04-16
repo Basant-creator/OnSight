@@ -20,6 +20,16 @@ const responseSchema = new mongoose.Schema({
   isCorrect: {
     type: Boolean,
     required: true
+  },
+  // Track if this question received grace marks
+  graceMarks: {
+    type: Number,
+    default: 0
+  },
+  // Whether student attempted this question (selected an answer)
+  wasAttempted: {
+    type: Boolean,
+    default: true
   }
 }, { _id: false });
 
@@ -34,6 +44,17 @@ const resultSchema = new mongoose.Schema({
     ref: "Exam",
     required: true
   },
+  // Original score before grace marks
+  originalScore: {
+    type: Number,
+    default: null
+  },
+  // Total grace marks awarded
+  totalGraceMarks: {
+    type: Number,
+    default: 0
+  },
+  // Final score (originalScore + totalGraceMarks)
   score: {
     type: Number,
     required: true,
@@ -62,6 +83,15 @@ const resultSchema = new mongoose.Schema({
     default: null
   },
   submittedAt: {
+    type: Date,
+    default: null
+  },
+  // Track if grace marks have been applied
+  graceMarksApplied: {
+    type: Boolean,
+    default: false
+  },
+  graceMarksAppliedAt: {
     type: Date,
     default: null
   }

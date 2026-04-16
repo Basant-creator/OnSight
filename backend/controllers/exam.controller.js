@@ -431,7 +431,8 @@ exports.submitAttempt = async (req, res) => {
     exam.questions.forEach((question, index) => {
       const answer = answers.find(a => a.questionIndex === index);
       const selectedAnswer = answer ? answer.selectedAnswer : null;
-      const isCorrect = selectedAnswer === question.correctAnswer;
+      const wasAttempted = selectedAnswer !== null && selectedAnswer !== undefined && selectedAnswer !== "";
+      const isCorrect = wasAttempted && selectedAnswer === question.correctAnswer;
 
       if (isCorrect) correctCount++;
 
@@ -440,15 +441,19 @@ exports.submitAttempt = async (req, res) => {
         questionText: question.questionText,
         selectedAnswer,
         correctAnswer: question.correctAnswer,
-        isCorrect
+        isCorrect,
+        wasAttempted,
+        graceMarks: 0
       });
     });
 
     const score = correctCount;
     const totalQuestions = exam.questions.length;
 
-    // Update the attempt
+    // Update the attempt - store original score
+    attempt.originalScore = score;
     attempt.score = score;
+    attempt.totalGraceMarks = 0;
     attempt.totalQuestions = totalQuestions;
     attempt.responses = responses;
     attempt.submittedAt = now;
@@ -504,16 +509,21 @@ exports.getStudentAttempts = async (req, res) => {
           scheduledAt: exam.scheduledAt
         } : null,
         score: isPublished ? attempt.score : null,
+        originalScore: isPublished ? attempt.originalScore : null,
+        totalGraceMarks: isPublished ? attempt.totalGraceMarks : null,
         totalQuestions: attempt.totalQuestions,
         status: attempt.status,
         attemptDate: attempt.attemptDate,
         submittedAt: attempt.submittedAt,
+        graceMarksApplied: attempt.graceMarksApplied,
         // Only include responses if published
         responses: isPublished ? attempt.responses.map(r => ({
           questionIndex: r.questionIndex,
           questionText: r.questionText,
           selectedAnswer: r.selectedAnswer,
-          isCorrect: r.isCorrect
+          isCorrect: r.isCorrect,
+          graceMarks: r.graceMarks,
+          wasAttempted: r.wasAttempted
         })) : null
       };
     });
@@ -552,20 +562,398 @@ exports.getAttemptDetails = async (req, res) => {
           scheduledAt: exam.scheduledAt
         } : null,
         score: isPublished ? attempt.score : null,
+        originalScore: isPublished ? attempt.originalScore : null,
+        totalGraceMarks: isPublished ? attempt.totalGraceMarks : null,
         totalQuestions: attempt.totalQuestions,
         status: attempt.status,
         attemptDate: attempt.attemptDate,
         submittedAt: attempt.submittedAt,
+        graceMarksApplied: attempt.graceMarksApplied,
         responses: isPublished ? attempt.responses.map(r => ({
           questionIndex: r.questionIndex,
           questionText: r.questionText,
           selectedAnswer: r.selectedAnswer,
-          isCorrect: r.isCorrect
+          isCorrect: r.isCorrect,
+          graceMarks: r.graceMarks,
+          wasAttempted: r.wasAttempted
         })) : null
       }
     });
   } catch (error) {
     console.error("Get Attempt Details Error:", error);
+    res.status(500).json({ error: "Error fetching attempt details" });
+  }
+};
+
+// Import ExamReview model
+const ExamReview = require("../models/ExamReview");
+
+// Get exam for teacher review with aggregated student responses
+exports.getExamForReview = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const teacherId = req.user.id;
+
+    // Check if exam belongs to teacher
+    const exam = await Exam.findOne({ _id: id, createdBy: teacherId });
+    if (!exam) {
+      return res.status(404).json({ error: "Exam not found or unauthorized" });
+    }
+
+    // Get all attempts for this exam
+    const attempts = await Result.find({ examId: id })
+      .populate("studentId", "name email");
+
+    // Calculate aggregated stats per question
+    const questionStats = exam.questions.map((question, index) => {
+      const stats = {
+        questionIndex: index,
+        questionText: question.questionText,
+        options: question.options,
+        correctAnswer: question.correctAnswer,
+        totalAttempted: 0,
+        totalCorrect: 0,
+        totalIncorrect: 0,
+        totalNotAttempted: 0,
+        optionDistribution: {}
+      };
+
+      // Initialize option distribution
+      question.options.forEach(opt => {
+        stats.optionDistribution[opt] = 0;
+      });
+      stats.optionDistribution["Not Attempted"] = 0;
+
+      attempts.forEach(attempt => {
+        const response = attempt.responses.find(r => r.questionIndex === index);
+        if (response) {
+          if (response.wasAttempted) {
+            stats.totalAttempted++;
+            if (response.isCorrect) {
+              stats.totalCorrect++;
+            } else {
+              stats.totalIncorrect++;
+            }
+            // Count option selection
+            if (stats.optionDistribution[response.selectedAnswer] !== undefined) {
+              stats.optionDistribution[response.selectedAnswer]++;
+            }
+          } else {
+            stats.totalNotAttempted++;
+            stats.optionDistribution["Not Attempted"]++;
+          }
+        }
+      });
+
+      return stats;
+    });
+
+    // Get existing review data if any
+    let review = await ExamReview.findOne({ examId: id });
+    if (!review) {
+      review = new ExamReview({
+        examId: id,
+        teacherId,
+        status: "under_review",
+        graceMarks: []
+      });
+      await review.save();
+    }
+
+    return res.status(200).json({
+      exam: {
+        _id: exam._id,
+        title: exam.title,
+        description: exam.description,
+        totalQuestions: exam.questions.length,
+        isPublished: exam.isPublished
+      },
+      questionStats,
+      totalAttempts: attempts.length,
+      review: {
+        status: review.status,
+        graceMarks: review.graceMarks,
+        totalGraceQuestions: review.totalGraceQuestions,
+        graceMarksAppliedAt: review.graceMarksAppliedAt
+      }
+    });
+  } catch (error) {
+    console.error("Get Exam For Review Error:", error);
+    res.status(500).json({ error: "Error fetching exam review data" });
+  }
+};
+
+// Mark a question for grace marks
+exports.addGraceMark = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { questionIndex, reason, marksToAward } = req.body;
+    const teacherId = req.user.id;
+
+    // Validate input
+    if (questionIndex === undefined || !reason || marksToAward === undefined) {
+      return res.status(400).json({ error: "Missing required fields: questionIndex, reason, marksToAward" });
+    }
+
+    if (marksToAward < 0 || marksToAward > 1) {
+      return res.status(400).json({ error: "marksToAward must be between 0 and 1" });
+    }
+
+    // Check if exam belongs to teacher
+    const exam = await Exam.findOne({ _id: id, createdBy: teacherId });
+    if (!exam) {
+      return res.status(404).json({ error: "Exam not found or unauthorized" });
+    }
+
+    // Check if exam is already published
+    if (exam.isPublished) {
+      return res.status(400).json({ error: "Cannot add grace marks to a published exam. Unpublish first." });
+    }
+
+    // Get the question text
+    const question = exam.questions[questionIndex];
+    if (!question) {
+      return res.status(400).json({ error: "Invalid question index" });
+    }
+
+    // Find or create review
+    let review = await ExamReview.findOne({ examId: id });
+    if (!review) {
+      review = new ExamReview({
+        examId: id,
+        teacherId,
+        status: "under_review",
+        graceMarks: []
+      });
+    }
+
+    // Check if this question already has a grace mark
+    const existingGraceIndex = review.graceMarks.findIndex(gm => gm.questionIndex === questionIndex);
+    if (existingGraceIndex >= 0) {
+      // Update existing grace mark
+      review.graceMarks[existingGraceIndex] = {
+        questionIndex,
+        questionText: question.questionText,
+        reason,
+        marksToAward,
+        appliedAt: new Date()
+      };
+    } else {
+      // Add new grace mark
+      review.graceMarks.push({
+        questionIndex,
+        questionText: question.questionText,
+        reason,
+        marksToAward,
+        appliedAt: new Date()
+      });
+    }
+
+    review.totalGraceQuestions = review.graceMarks.length;
+    review.status = "reviewed";
+    review.reviewedAt = new Date();
+    await review.save();
+
+    return res.status(200).json({
+      message: "Grace mark added successfully",
+      review: {
+        status: review.status,
+        graceMarks: review.graceMarks,
+        totalGraceQuestions: review.totalGraceQuestions
+      }
+    });
+  } catch (error) {
+    console.error("Add Grace Mark Error:", error);
+    res.status(500).json({ error: "Error adding grace mark" });
+  }
+};
+
+// Remove a grace mark
+exports.removeGraceMark = async (req, res) => {
+  try {
+    const { id, questionIndex } = req.params;
+    const teacherId = req.user.id;
+
+    // Check if exam belongs to teacher
+    const exam = await Exam.findOne({ _id: id, createdBy: teacherId });
+    if (!exam) {
+      return res.status(404).json({ error: "Exam not found or unauthorized" });
+    }
+
+    // Check if exam is already published
+    if (exam.isPublished) {
+      return res.status(400).json({ error: "Cannot remove grace marks from a published exam. Unpublish first." });
+    }
+
+    const review = await ExamReview.findOne({ examId: id });
+    if (!review) {
+      return res.status(404).json({ error: "No review found for this exam" });
+    }
+
+    // Remove the grace mark
+    review.graceMarks = review.graceMarks.filter(gm => gm.questionIndex !== parseInt(questionIndex));
+    review.totalGraceQuestions = review.graceMarks.length;
+    await review.save();
+
+    return res.status(200).json({
+      message: "Grace mark removed successfully",
+      review: {
+        status: review.status,
+        graceMarks: review.graceMarks,
+        totalGraceQuestions: review.totalGraceQuestions
+      }
+    });
+  } catch (error) {
+    console.error("Remove Grace Mark Error:", error);
+    res.status(500).json({ error: "Error removing grace mark" });
+  }
+};
+
+// Apply grace marks to all attempts and recalculate scores
+exports.applyGraceMarks = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const teacherId = req.user.id;
+
+    // Check if exam belongs to teacher
+    const exam = await Exam.findOne({ _id: id, createdBy: teacherId });
+    if (!exam) {
+      return res.status(404).json({ error: "Exam not found or unauthorized" });
+    }
+
+    // Get the review
+    const review = await ExamReview.findOne({ examId: id });
+    if (!review || review.graceMarks.length === 0) {
+      return res.status(400).json({ error: "No grace marks to apply" });
+    }
+
+    // Get all attempts for this exam
+    const attempts = await Result.find({ examId: id });
+
+    let updatedCount = 0;
+
+    for (const attempt of attempts) {
+      let totalGraceMarks = 0;
+
+      // Apply grace marks to each response
+      for (const graceMark of review.graceMarks) {
+        const response = attempt.responses.find(r => r.questionIndex === graceMark.questionIndex);
+
+        if (response) {
+          // Only award grace marks if the question was attempted (not left blank)
+          if (response.wasAttempted) {
+            // Remove previous grace marks if any
+            const previousGrace = response.graceMarks || 0;
+            if (previousGrace > 0) {
+              totalGraceMarks -= previousGrace;
+            }
+
+            // Award new grace marks
+            response.graceMarks = graceMark.marksToAward;
+            totalGraceMarks += graceMark.marksToAward;
+          } else {
+            // If not attempted, no grace marks
+            response.graceMarks = 0;
+          }
+        }
+      }
+
+      // Calculate new total score
+      const originalCorrectCount = attempt.responses.filter(r => r.isCorrect).length;
+      const graceMarksTotal = attempt.responses.reduce((sum, r) => sum + (r.graceMarks || 0), 0);
+      const finalScore = originalCorrectCount + graceMarksTotal;
+
+      // Save original score if not already saved
+      if (attempt.originalScore === null || attempt.originalScore === undefined) {
+        attempt.originalScore = originalCorrectCount;
+      }
+
+      attempt.totalGraceMarks = graceMarksTotal;
+      attempt.score = finalScore;
+      attempt.graceMarksApplied = true;
+      attempt.graceMarksAppliedAt = new Date();
+      await attempt.save();
+      updatedCount++;
+    }
+
+    // Update review status
+    review.status = "grace_marks_applied";
+    review.graceMarksAppliedAt = new Date();
+    await review.save();
+
+    return res.status(200).json({
+      message: `Grace marks applied successfully to ${updatedCount} attempts`,
+      review: {
+        status: review.status,
+        graceMarks: review.graceMarks,
+        totalGraceQuestions: review.totalGraceQuestions,
+        graceMarksAppliedAt: review.graceMarksAppliedAt
+      }
+    });
+  } catch (error) {
+    console.error("Apply Grace Marks Error:", error);
+    res.status(500).json({ error: "Error applying grace marks" });
+  }
+};
+
+// Get detailed attempt view for teacher (with grace mark info)
+exports.getTeacherAttemptDetails = async (req, res) => {
+  try {
+    const { attemptId } = req.params;
+    const teacherId = req.user.id;
+
+    const attempt = await Result.findById(attemptId)
+      .populate("studentId", "name email")
+      .populate("examId", "title description questions durationMinutes");
+
+    if (!attempt) {
+      return res.status(404).json({ error: "Attempt not found" });
+    }
+
+    // Verify teacher owns this exam
+    const exam = attempt.examId;
+    if (exam.createdBy.toString() !== teacherId) {
+      return res.status(403).json({ error: "Unauthorized to view this attempt" });
+    }
+
+    // Get review data
+    const review = await ExamReview.findOne({ examId: exam._id });
+
+    return res.status(200).json({
+      attempt: {
+        _id: attempt._id,
+        student: attempt.studentId,
+        exam: {
+          _id: exam._id,
+          title: exam.title,
+          description: exam.description,
+          durationMinutes: exam.durationMinutes
+        },
+        score: attempt.score,
+        originalScore: attempt.originalScore,
+        totalGraceMarks: attempt.totalGraceMarks,
+        totalQuestions: attempt.totalQuestions,
+        status: attempt.status,
+        attemptDate: attempt.attemptDate,
+        submittedAt: attempt.submittedAt,
+        graceMarksApplied: attempt.graceMarksApplied,
+        responses: attempt.responses.map(r => ({
+          questionIndex: r.questionIndex,
+          questionText: r.questionText,
+          selectedAnswer: r.selectedAnswer,
+          correctAnswer: exam.questions[r.questionIndex]?.correctAnswer,
+          isCorrect: r.isCorrect,
+          wasAttempted: r.wasAttempted,
+          graceMarks: r.graceMarks
+        }))
+      },
+      review: review ? {
+        status: review.status,
+        graceMarks: review.graceMarks
+      } : null
+    });
+  } catch (error) {
+    console.error("Get Teacher Attempt Details Error:", error);
     res.status(500).json({ error: "Error fetching attempt details" });
   }
 };

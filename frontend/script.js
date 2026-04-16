@@ -467,6 +467,7 @@ async function loadTeacherExams() {
                 </div>
                 <div class="actions-flex">
                     <button onclick="promptRenameExam('${exam._id}', '${exam.title.replace(/'/g, "\\'")}')" title="Rename Exam"><span class="material-symbols-outlined">edit</span></button>
+                    <button onclick="openExamReview('${exam._id}')" title="Review Exam"><span class="material-symbols-outlined">reviews</span></button>
                     ${!exam.isPublished ? `<button onclick="publishExam('${exam._id}')" title="Publish Results"><span class="material-symbols-outlined">campaign</span></button>` : ''}
                 </div>
             </div>
@@ -1014,19 +1015,33 @@ function renderAttemptDetailView(attempt) {
     let responsesHtml = '';
 
     if (responses.length > 0) {
-        responsesHtml = responses.map((r, idx) => `
-            <div class="response-item" style="margin-bottom: 1.5rem; padding: 1rem; background: var(--surface); border: 1px solid var(--surface-border); border-radius: 0.5rem; ${r.isCorrect ? 'border-left: 4px solid var(--success, #4caf50);' : 'border-left: 4px solid var(--error);'}">
+        responsesHtml = responses.map((r, idx) => {
+            const hasGraceMark = r.graceMarks > 0;
+            return `
+            <div class="response-item" style="margin-bottom: 1.5rem; padding: 1rem; background: var(--surface); border: 1px solid var(--surface-border); border-radius: 0.5rem; ${r.isCorrect ? 'border-left: 4px solid var(--success, #4caf50);' : hasGraceMark ? 'border-left: 4px solid var(--warning, #ff9800);' : 'border-left: 4px solid var(--error);'}">
                 <p style="font-weight: bold; margin-bottom: 0.5rem;">Q${idx + 1}. ${escapeHtml(r.questionText)}</p>
-                <p style="color: ${r.isCorrect ? 'var(--success, #4caf50)' : 'var(--error)'};">
-                    Your answer: ${escapeHtml(r.selectedAnswer) || 'Not answered'} ${r.isCorrect ? '(Correct)' : '(Incorrect)'}
+                <p style="color: ${r.isCorrect ? 'var(--success, #4caf50)' : hasGraceMark ? 'var(--warning, #ff9800)' : 'var(--error)'};">
+                    Your answer: ${escapeHtml(r.selectedAnswer) || 'Not answered'}
+                    ${r.isCorrect ? '(Correct)' : hasGraceMark ? '(Incorrect + Grace Mark)' : '(Incorrect)'}
                 </p>
-            </div>
-        `).join('');
+                ${hasGraceMark ? `<p style="font-size: 0.85em; color: var(--warning, #ff9800);">+${r.graceMarks} grace mark${r.graceMarks !== 1 ? 's' : ''} awarded</p>
+                ` : ''}
+            </div>`;
+        }).join('');
     }
 
     const percentage = attempt.totalQuestions > 0
         ? Math.round((attempt.score / attempt.totalQuestions) * 100)
         : 0;
+
+    const graceMarksInfo = attempt.graceMarksApplied ? `
+        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--surface-border);">
+            <div style="font-size: 0.9em; color: var(--on-surface-variant);">
+                <div>Original Score: <strong>${attempt.originalScore}</strong></div>
+                ${attempt.totalGraceMarks > 0 ? `<div style="color: var(--warning, #ff9800);">Grace Marks: +${attempt.totalGraceMarks}</div>` : ''}
+            </div>
+        </div>
+    ` : '';
 
     container.innerHTML = `
         <div class="attempt-detail" style="max-width: 800px; margin: 0 auto; padding: 1rem;">
@@ -1042,6 +1057,7 @@ function renderAttemptDetailView(attempt) {
                     ${attempt.score} / ${attempt.totalQuestions}
                 </div>
                 <p style="color: var(--on-surface-variant);">${percentage}% Correct</p>
+                ${graceMarksInfo}
                 <span class="badge primary" style="margin-top: 1rem; display: inline-block;">
                     ${attempt.status.toUpperCase()}
                 </span>
@@ -1067,3 +1083,212 @@ if (navExams) {
         loadStudentAttemptsHistory();
     });
 }
+
+// ------------------------------------------------------------------
+// TEACHER EXAM REVIEW FLOW
+// ------------------------------------------------------------------
+
+// Global function to open exam review
+window.openExamReview = async function(examId) {
+    const container = document.getElementById("exams-list-container");
+    if (container) {
+        container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);">Loading review data...</div>`;
+    }
+
+    const { ok, data } = await apiFetch(`/api/teacher/exams/${examId}/review`, { method: "GET" });
+
+    if (ok) {
+        renderExamReviewInterface(data, examId);
+    } else {
+        alert(data.error || "Failed to load exam review data.");
+        loadTeacherExams();
+    }
+};
+
+function renderExamReviewInterface(data, examId) {
+    const container = document.getElementById("view-exams");
+    if (!container) return;
+
+    const { exam, questionStats, totalAttempts, review } = data;
+    const isPublished = exam.isPublished;
+    const graceMarksApplied = review.status === "grace_marks_applied";
+
+    let questionsHtml = questionStats.map((q, idx) => {
+        const hasGraceMark = review.graceMarks.find(gm => gm.questionIndex === q.questionIndex);
+        const optionDistHtml = Object.entries(q.optionDistribution)
+            .map(([opt, count]) => {
+                const percentage = totalAttempts > 0 ? Math.round((count / totalAttempts) * 100) : 0;
+                const isCorrect = opt === q.correctAnswer;
+                return `
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                        <span style="font-size: 0.85em; color: ${isCorrect ? 'var(--success, #4caf50)' : 'var(--on-surface-variant)'}; min-width: 120px;">${escapeHtml(opt)}${isCorrect ? ' ✓' : ''}</span>
+                        <div style="flex: 1; background: var(--surface-container); border-radius: 4px; overflow: hidden; height: 20px;">
+                            <div style="width: ${percentage}%; background: ${isCorrect ? 'var(--success, #4caf50)' : 'var(--primary)'}; height: 100%; transition: width 0.3s;"></div>
+                        </div>
+                        <span style="font-size: 0.85em; min-width: 40px; text-align: right;">${count}</span>
+                    </div>
+                `;
+            }).join('');
+
+        return `
+            <div class="review-question" style="margin-bottom: 2rem; padding: 1.5rem; background: var(--surface); border: 1px solid var(--surface-border); border-radius: 0.75rem; ${hasGraceMark ? 'border-left: 4px solid var(--warning, #ff9800);' : ''}">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                    <h4 style="margin: 0; flex: 1;">Q${idx + 1}. ${escapeHtml(q.questionText)}</h4>
+                    ${!isPublished ? `
+                        <button class="btn-card ${hasGraceMark ? 'secondary' : 'primary'}" style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="${hasGraceMark ? `removeGraceMark('${examId}', ${q.questionIndex})` : `showGraceMarkDialog('${examId}', ${q.questionIndex}, '${escapeHtml(q.questionText)}')`}">
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">${hasGraceMark ? 'remove_circle' : 'add_circle'}</span>
+                            ${hasGraceMark ? 'Remove Grace' : 'Add Grace'}
+                        </button>
+                    ` : ''}
+                </div>
+
+                ${hasGraceMark ? `
+                    <div style="background: var(--warning-container, rgba(255,152,0,0.1)); padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+                        <span class="badge" style="background: var(--warning, #ff9800); color: white;">Grace Mark Applied</span>
+                        <span style="font-size: 0.9em; color: var(--on-surface-variant); margin-left: 0.5rem;">${hasGraceMark.marksToAward} mark${hasGraceMark.marksToAward !== 1 ? 's' : ''} awarded: ${escapeHtml(hasGraceMark.reason)}</span>
+                    </div>
+                ` : ''}
+
+                <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div style="text-align: center; padding: 0.75rem; background: var(--surface-container); border-radius: 0.5rem;">
+                        <div style="font-size: 1.5rem; font-weight: bold; color: var(--primary);">${q.totalAttempted}</div>
+                        <div style="font-size: 0.75rem; color: var(--on-surface-variant);">Attempted</div>
+                    </div>
+                    <div style="text-align: center; padding: 0.75rem; background: var(--surface-container); border-radius: 0.5rem;">
+                        <div style="font-size: 1.5rem; font-weight: bold; color: var(--success, #4caf50);">${q.totalCorrect}</div>
+                        <div style="font-size: 0.75rem; color: var(--on-surface-variant);">Correct</div>
+                    </div>
+                    <div style="text-align: center; padding: 0.75rem; background: var(--surface-container); border-radius: 0.5rem;">
+                        <div style="font-size: 1.5rem; font-weight: bold; color: var(--error);">${q.totalIncorrect}</div>
+                        <div style="font-size: 0.75rem; color: var(--on-surface-variant);">Incorrect</div>
+                    </div>
+                    <div style="text-align: center; padding: 0.75rem; background: var(--surface-container); border-radius: 0.5rem;">
+                        <div style="font-size: 1.5rem; font-weight: bold; color: var(--on-surface-variant);">${q.totalNotAttempted}</div>
+                        <div style="font-size: 0.75rem; color: var(--on-surface-variant);">Not Attempted</div>
+                    </div>
+                </div>
+
+                <div class="option-distribution" style="margin-top: 1rem;">
+                    <p style="font-weight: bold; margin-bottom: 0.5rem; font-size: 0.9em;">Student Responses:</p>
+                    ${optionDistHtml}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="exam-review" style="max-width: 900px; margin: 0 auto; padding: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+                <button class="btn-card secondary" onclick="showTeacherExamsView()">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                    Back to Exams
+                </button>
+                <div style="text-align: right;">
+                    <h2 style="margin: 0;">${escapeHtml(exam.title)}</h2>
+                    <p style="margin: 0; color: var(--on-surface-variant); font-size: 0.9em;">${totalAttempts} student attempt${totalAttempts !== 1 ? 's' : ''}</p>
+                </div>
+            </div>
+
+            <div style="background: var(--surface); border: 1px solid var(--surface-border); border-radius: 1rem; padding: 1.5rem; margin-bottom: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <span class="badge ${review.status === 'grace_marks_applied' ? 'primary' : 'secondary'}" style="margin-bottom: 0.5rem; display: inline-block;">
+                            Review Status: ${review.status.toUpperCase().replace(/_/g, ' ')}
+                        </span>
+                        <p style="margin: 0; color: var(--on-surface-variant);">
+                            Grace marks configured: ${review.graceMarks.length} question${review.graceMarks.length !== 1 ? 's' : ''}
+                        </p>
+                    </div>
+                    ${!isPublished && review.graceMarks.length > 0 && !graceMarksApplied ? `
+                        <button class="btn-card primary" onclick="applyGraceMarks('${examId}')">
+                            Apply Grace Marks
+                            <span class="material-symbols-outlined">published_with_changes</span>
+                        </button>
+                    ` : ''}
+                    ${graceMarksApplied ? `
+                        <span class="badge" style="background: var(--success, #4caf50);">Grace Marks Applied</span>
+                    ` : ''}
+                </div>
+            </div>
+
+            <h3 style="margin-bottom: 1rem;">Question Review</h3>
+            ${questionsHtml}
+        </div>
+    `;
+}
+
+// Show dialog to add grace mark
+window.showGraceMarkDialog = function(examId, questionIndex, questionText) {
+    const marksToAward = prompt(`Add grace mark for:\n\n"${questionText.substring(0, 100)}${questionText.length > 100 ? '...' : ''}"\n\nEnter marks to award (0-1, e.g., 0.5 or 1):`, "1");
+
+    if (marksToAward === null) return;
+
+    const parsedMarks = parseFloat(marksToAward);
+    if (isNaN(parsedMarks) || parsedMarks < 0 || parsedMarks > 1) {
+        alert("Please enter a valid number between 0 and 1");
+        return;
+    }
+
+    const reason = prompt("Enter reason for grace mark:", "Question had issues");
+    if (reason === null || reason.trim() === "") {
+        alert("Reason is required");
+        return;
+    }
+
+    addGraceMark(examId, questionIndex, reason.trim(), parsedMarks);
+};
+
+// Add grace mark
+async function addGraceMark(examId, questionIndex, reason, marksToAward) {
+    const { ok, data } = await apiFetch(`/api/teacher/exams/${examId}/grace-mark`, {
+        method: "POST",
+        body: JSON.stringify({ questionIndex, reason, marksToAward })
+    });
+
+    if (ok) {
+        alert("Grace mark added successfully!");
+        openExamReview(examId);
+    } else {
+        alert(data.error || "Failed to add grace mark.");
+    }
+}
+
+// Remove grace mark
+window.removeGraceMark = async function(examId, questionIndex) {
+    if (!confirm("Remove grace mark from this question?")) return;
+
+    const { ok, data } = await apiFetch(`/api/teacher/exams/${examId}/grace-mark/${questionIndex}`, {
+        method: "DELETE"
+    });
+
+    if (ok) {
+        alert("Grace mark removed successfully!");
+        openExamReview(examId);
+    } else {
+        alert(data.error || "Failed to remove grace mark.");
+    }
+};
+
+// Apply grace marks to all attempts
+window.applyGraceMarks = async function(examId) {
+    if (!confirm("Apply grace marks to all student attempts? This will recalculate scores for students who attempted the grace-marked questions.\n\nStudents who left those questions blank will NOT receive grace marks.")) return;
+
+    const { ok, data } = await apiFetch(`/api/teacher/exams/${examId}/apply-grace-marks`, {
+        method: "POST"
+    });
+
+    if (ok) {
+        alert("Grace marks applied successfully!");
+        openExamReview(examId);
+    } else {
+        alert(data.error || "Failed to apply grace marks.");
+    }
+};
+
+// Show teacher exams view
+window.showTeacherExamsView = function() {
+    const navTeacherExams = document.getElementById("nav-exams");
+    if (navTeacherExams) {
+        navTeacherExams.click();
+    }
+};

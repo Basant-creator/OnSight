@@ -99,6 +99,41 @@ router.get(
   examController.getExamAttempts
 );
 
+router.get(
+  "/teacher/exams/:id/review",
+  authenticateToken,
+  authorizeRole("teacher"),
+  examController.getExamForReview
+);
+
+router.post(
+  "/teacher/exams/:id/grace-mark",
+  authenticateToken,
+  authorizeRole("teacher"),
+  examController.addGraceMark
+);
+
+router.delete(
+  "/teacher/exams/:id/grace-mark/:questionIndex",
+  authenticateToken,
+  authorizeRole("teacher"),
+  examController.removeGraceMark
+);
+
+router.post(
+  "/teacher/exams/:id/apply-grace-marks",
+  authenticateToken,
+  authorizeRole("teacher"),
+  examController.applyGraceMarks
+);
+
+router.get(
+  "/teacher/attempts/:attemptId",
+  authenticateToken,
+  authorizeRole("teacher"),
+  examController.getTeacherAttemptDetails
+);
+
 router.post(
   "/teacher/exams/:id/publish-results",
   authenticateToken,

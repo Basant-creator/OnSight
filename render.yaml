@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: onsight-api
+    runtime: node
+    buildCommand: npm install
+    startCommand: node backend/server.js
+    disk:
+      name: tmp-uploads
+      mountPath: /tmp
+      sizeGB: 1  # For temporary PDF uploads before processing
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: MONGO_URI
+        sync: false  # REQUIRED: MongoDB Atlas connection string
+      - key: FRONTEND_URL
+        sync: false  # REQUIRED: Your Vercel URL (e.g., https://your-app.vercel.app)
+      - key: GEMINI_API_KEY
+        sync: false  # REQUIRED: Google Gemini API key for PDF extraction

@@ -10,7 +10,7 @@ const protectedRoutes = require("./routes/protected")
 const app = express()
 
 app.use(cors({
-  origin: true,
+  origin: process.env.FRONTEND_URL || "http://localhost:5500",
   credentials: true
 }))
 app.use(express.json())

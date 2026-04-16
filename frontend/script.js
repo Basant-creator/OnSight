@@ -1,5 +1,5 @@
 // Global configuration
-const API_BASE = "http://localhost:5000";
+const API_BASE = window.API_BASE || "http://localhost:5000";
 
 // ------------------------------------------------------------------
 // THEME TOGGLE LOGIC
@@ -272,6 +272,60 @@ if (navDashboard && navExams && viewDashboard && viewExams) {
     
     // Load student data initially
     loadStudentUpcomingExams();
+    loadStudentPerformance();
+}
+
+async function loadStudentPerformance() {
+    const chartContainer = document.getElementById("performance-chart");
+    const noDataMessage = document.getElementById("no-performance-data");
+    if (!chartContainer || !noDataMessage) return;
+
+    const { ok, data } = await apiFetch("/api/student/attempts", { method: "GET" });
+
+    if (ok && data.attempts) {
+        // Filter only published attempts with scores
+        const publishedAttempts = data.attempts.filter(att => att.status === "published" && att.score !== null);
+
+        if (publishedAttempts.length === 0) {
+            // No published results yet - show "No data for now.."
+            noDataMessage.style.display = "flex";
+            chartContainer.style.display = "none";
+            return;
+        }
+
+        // Hide no data message and show chart
+        noDataMessage.style.display = "none";
+        chartContainer.style.display = "flex";
+
+        // Sort attempts by date (oldest first for the chart)
+        const sortedAttempts = publishedAttempts.sort((a, b) => new Date(a.attemptDate) - new Date(b.attemptDate));
+
+        // Get last 5 attempts for the chart (or fewer if less available)
+        const recentAttempts = sortedAttempts.slice(-5);
+
+        // Generate chart HTML
+        const chartHtml = recentAttempts.map((attempt, index) => {
+            const percentage = attempt.totalQuestions > 0
+                ? Math.round((attempt.score / attempt.totalQuestions) * 100)
+                : 0;
+            const examTitle = attempt.exam ? attempt.exam.title : `Exam ${index + 1}`;
+            const shortLabel = examTitle.length > 8 ? examTitle.substring(0, 8) + "..." : examTitle;
+            const isLatest = index === recentAttempts.length - 1;
+
+            return `
+                <div class="bar-item">
+                    <div class="bar ${isLatest ? 'highlight-bar' : ''}" style="height: ${percentage}%;"></div>
+                    <span class="bar-label" title="${examTitle}">${shortLabel}</span>
+                </div>
+            `;
+        }).join('');
+
+        chartContainer.innerHTML = chartHtml;
+    } else {
+        // Error or no data - show no data message
+        noDataMessage.style.display = "flex";
+        chartContainer.style.display = "none";
+    }
 }
 
 async function loadStudentUpcomingExams() {
@@ -281,7 +335,7 @@ async function loadStudentUpcomingExams() {
     container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);">Loading upcoming exams...</div>`;
 
     const { ok, data } = await apiFetch("/api/student/exams", { method: "GET" });
-    
+
     if (ok && data.exams) {
         if(data.exams.length === 0) {
             container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);">No upcoming exams scheduled. Enjoy your free time!</div>`;

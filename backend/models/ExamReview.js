@@ -60,7 +60,4 @@ const examReviewSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// Index for quick lookups
-examReviewSchema.index({ examId: 1 });
-
 module.exports = mongoose.model("ExamReview", examReviewSchema);

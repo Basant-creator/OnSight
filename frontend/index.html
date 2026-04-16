@@ -1,134 +1,165 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>OnSight - Next-Gen Academic Assessment</title>
-    <link rel="stylesheet" href="style.css"/>
-    <script>window.API_BASE=window.location.hostname.includes('vercel.app')?'https://your-render-url.onrender.com':'http://localhost:5000';</script>
+    <link rel="stylesheet" href="style.css" />
+    <script>window.API_BASE = window.location.hostname.includes('vercel.app') ? 'https://your-render-url.onrender.com' : 'http://localhost:5000';</script>
     <script src="config.js"></script>
     <script src="script.js" defer></script>
 </head>
+
 <body class="landing-body">
 
 
 
-<!-- Navbar -->
-<nav class="landing-nav">
-    <div class="landing-brand">OnSight.</div>
-    <div class="landing-nav-actions" style="align-items: center;">
-        <button class="theme-toggle" style="margin-right: 1rem; color: var(--primary);" title="Toggle Dark/Light Mode">
-            <span class="material-symbols-outlined">contrast</span>
-        </button>
-        <!-- Login Dropdown Wrapper -->
-        <div style="position: relative;" id="login-wrapper">
-            <button id="login-dropdown-btn" class="btn-outline" style="cursor: pointer;">Access Portal &#9662;</button>
-            <div id="login-dropdown" class="card highlight" style="display: none; position: absolute; right: 0; top: 120%; width: 320px; z-index: 100; padding: 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-                <div style="text-align: center; margin-bottom: 1rem;">
-                    <h2 class="editorial-text gradient-text" style="font-size: 1.4rem; font-weight: 800; color: var(--primary);">System Login</h2>
+    <!-- Navbar -->
+    <nav class="landing-nav">
+        <div class="landing-brand">OnSight.</div>
+        <div class="landing-nav-actions" style="align-items: center;">
+            <button class="theme-toggle" style="margin-right: 1rem; color: var(--primary);"
+                title="Toggle Dark/Light Mode">
+                <span class="material-symbols-outlined">contrast</span>
+            </button>
+            <!-- Login Dropdown Wrapper -->
+            <div style="position: relative;" id="login-wrapper">
+                <button id="login-dropdown-btn" class="btn-outline" style="cursor: pointer;">Access Portal
+                    &#9662;</button>
+                <div id="login-dropdown" class="card highlight"
+                    style="display: none; position: absolute; right: 0; top: 120%; width: 320px; z-index: 100; padding: 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                    <div style="text-align: center; margin-bottom: 1rem;">
+                        <h2 class="editorial-text gradient-text"
+                            style="font-size: 1.4rem; font-weight: 800; color: var(--primary);">System Login</h2>
+                    </div>
+
+                    <div id="auth-error-box"
+                        style="display: none; background-color: rgba(236, 124, 138, 0.1); border: 1px solid var(--error); color: var(--error); padding: 0.5rem; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 0.8rem; text-align: center; font-weight: bold;">
+                    </div>
+
+                    <form id="loginForm" class="flex-col gap-3">
+                        <div class="search-bar" style="width: 100%;">
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">badge</span>
+                            <select id="role" required
+                                style="width: 100%; height: 2.5rem; padding-left: 2.2rem; border-radius: 0.5rem; background-color: var(--surface-container-high); border: 1px solid var(--surface-bright); color: var(--on-surface);">
+                                <option value="" disabled selected>Select Role</option>
+                                <option value="student">Student</option>
+                                <option value="teacher">Teacher</option>
+                                <option value="head_admin">Admin</option>
+                            </select>
+                        </div>
+                        <div class="search-bar" style="width: 100%;">
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">mail</span>
+                            <input type="email" id="email" required placeholder="name@onsight.edu"
+                                style="width: 100%; height: 2.5rem; padding-left: 2.2rem; border-radius: 0.5rem; background-color: var(--surface-container-high); border: 1px solid var(--surface-bright); color: var(--on-surface);" />
+                        </div>
+                        <div class="search-bar" style="width: 100%; margin-bottom: 0.5rem;">
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">lock</span>
+                            <input type="password" id="password" required placeholder="••••••••"
+                                style="width: 100%; height: 2.5rem; padding-left: 2.2rem; border-radius: 0.5rem; background-color: var(--surface-container-high); border: 1px solid var(--surface-bright); color: var(--on-surface);" />
+                        </div>
+                        <button type="submit" class="btn-card primary"
+                            style="height: 2.5rem; font-size: 1rem; border-radius: 0.5rem; width: 100%; display: flex; justify-content: center; align-items: center; gap: 0.5rem;">
+                            Authenticate <span class="material-symbols-outlined" style="font-size: 1.2rem;">login</span>
+                        </button>
+                    </form>
                 </div>
-                
-                <div id="auth-error-box" style="display: none; background-color: rgba(236, 124, 138, 0.1); border: 1px solid var(--error); color: var(--error); padding: 0.5rem; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 0.8rem; text-align: center; font-weight: bold;"></div>
-                
-                <form id="loginForm" class="flex-col gap-3">
-                    <div class="search-bar" style="width: 100%;">
-                        <span class="material-symbols-outlined" style="font-size: 1rem;">badge</span>
-                        <select id="role" required style="width: 100%; height: 2.5rem; padding-left: 2.2rem; border-radius: 0.5rem; background-color: var(--surface-container-high); border: 1px solid var(--surface-bright); color: var(--on-surface);">
-                            <option value="" disabled selected>Select Role</option>
-                            <option value="student">Student</option>
-                            <option value="teacher">Teacher</option>
-                            <option value="head_admin">Admin</option>
-                        </select>
-                    </div>
-                    <div class="search-bar" style="width: 100%;">
-                        <span class="material-symbols-outlined" style="font-size: 1rem;">mail</span>
-                        <input type="email" id="email" required placeholder="name@onsight.edu" style="width: 100%; height: 2.5rem; padding-left: 2.2rem; border-radius: 0.5rem; background-color: var(--surface-container-high); border: 1px solid var(--surface-bright); color: var(--on-surface);"/>
-                    </div>
-                    <div class="search-bar" style="width: 100%; margin-bottom: 0.5rem;">
-                        <span class="material-symbols-outlined" style="font-size: 1rem;">lock</span>
-                        <input type="password" id="password" required placeholder="••••••••" style="width: 100%; height: 2.5rem; padding-left: 2.2rem; border-radius: 0.5rem; background-color: var(--surface-container-high); border: 1px solid var(--surface-bright); color: var(--on-surface);"/>
-                    </div>
-                    <button type="submit" class="btn-card primary" style="height: 2.5rem; font-size: 1rem; border-radius: 0.5rem; width: 100%; display: flex; justify-content: center; align-items: center; gap: 0.5rem;">
-                        Authenticate <span class="material-symbols-outlined" style="font-size: 1.2rem;">login</span>
-                    </button>
-                </form>
+            </div>
+            <a href="mailto:basantbhushan89@gmail.com" class="btn-solid" style="margin-left: 1rem;">Contact Admin</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero-full">
+        <h1 class="editorial-text"><span id="hero-typing-text"></span><span class="blinking-cursor">_</span></h1>
+        <p>A rigorous, beautiful, and hyper-secure platform for faculties to manage academic assessments and students to
+            achieve their milestones.</p>
+
+        <div class="hero-actions">
+            <button onclick="document.getElementById('login-dropdown-btn').click();" class="btn-solid"
+                style="padding: 1rem 2rem; font-size: 1.125rem; border: none; cursor: pointer;">Access Portal</button>
+            <a href="mailto:basantbhushan89@gmail.com" class="btn-outline"
+                style="padding: 1rem 2rem; font-size: 1.125rem;">Request Full Deployment</a>
+        </div>
+    </header>
+
+
+
+
+    <!-- How it Works / Feature Showcase -->
+    <section class="section-showcase">
+        <h2 class="editorial-text">Platform Overview</h2>
+
+        <!-- Teacher Feature -->
+        <div class="showcase-grid" style="margin-bottom: 6rem;">
+            <div class="showcase-text">
+                <h3>Faculty Control Center</h3>
+                <p>Empower your academics with the OnSight dashboard. Teachers can securely draft, edit, and organize
+                    complex multiple-choice question banks with granular difficulty ratings and subject categorization.
+                </p>
+                <a href="teacher_dashboard.html"
+                    style="color: var(--primary); font-weight: bold; text-decoration: none; border-bottom: 2px solid var(--primary-dim); padding-bottom: 2px;">View
+                    the Teacher Interface &rarr;</a>
+            </div>
+            <div>
+                <!-- Placeholder for actual screenshot -->
+                <div
+                    style="width: 100%; aspect-ratio: 16/9; background: var(--surface); border-radius: 1rem; border: 1px solid var(--surface-border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; color: var(--on-surface-variant); position: relative;">
+                    <span class="material-symbols-outlined"
+                        style="font-size: 3rem; margin-bottom: 2rem;">dashboard</span>
+                    <p style="position: absolute; margin-top: 5rem; font-weight: bold;">Teacher Dashboard Screenshot</p>
+                </div>
             </div>
         </div>
-        <a href="mailto:basantbhushan89@gmail.com" class="btn-solid" style="margin-left: 1rem;">Contact Admin</a>
-    </div>
-</nav>
 
-<!-- Hero Section -->
-<header class="hero-full">
-    <h1 class="editorial-text"><span id="hero-typing-text"></span><span class="blinking-cursor">_</span></h1>
-    <p>A rigorous, beautiful, and hyper-secure platform for faculties to manage academic assessments and students to achieve their milestones.</p>
-    
-    <div class="hero-actions">
-        <button onclick="document.getElementById('login-dropdown-btn').click();" class="btn-solid" style="padding: 1rem 2rem; font-size: 1.125rem; border: none; cursor: pointer;">Access Portal</button>
-        <a href="mailto:basantbhushan89@gmail.com" class="btn-outline" style="padding: 1rem 2rem; font-size: 1.125rem;">Request Full Deployment</a>
-    </div>
-</header>
-
-
-
-
-<!-- How it Works / Feature Showcase -->
-<section class="section-showcase">
-    <h2 class="editorial-text">Platform Overview</h2>
-    
-    <!-- Teacher Feature -->
-    <div class="showcase-grid" style="margin-bottom: 6rem;">
-        <div class="showcase-text">
-            <h3>Faculty Control Center</h3>
-            <p>Empower your academics with the OnSight dashboard. Teachers can securely draft, edit, and organize complex multiple-choice question banks with granular difficulty ratings and subject categorization.</p>
-            <a href="teacher_dashboard.html" style="color: var(--primary); font-weight: bold; text-decoration: none; border-bottom: 2px solid var(--primary-dim); padding-bottom: 2px;">View the Teacher Interface &rarr;</a>
-        </div>
-        <div>
-            <!-- Placeholder for actual screenshot -->
-            <div style="width: 100%; aspect-ratio: 16/9; background: var(--surface); border-radius: 1rem; border: 1px solid var(--surface-border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; color: var(--on-surface-variant); position: relative;">
-                <span class="material-symbols-outlined" style="font-size: 3rem; margin-bottom: 2rem;">dashboard</span>
-                <p style="position: absolute; margin-top: 5rem; font-weight: bold;">Teacher Dashboard Screenshot</p>
+        <!-- Student Feature -->
+        <div class="showcase-grid reverse">
+            <div class="showcase-text">
+                <h3>Frictionless Student Experience</h3>
+                <p>Students enter a highly immersive, distraction-free environment to browse available exams and execute
+                    their assessments. The interface respects focus and emphasizes clarity above all.</p>
+                <a href="student_dashboard.html"
+                    style="color: var(--primary); font-weight: bold; text-decoration: none; border-bottom: 2px solid var(--primary-dim); padding-bottom: 2px;">View
+                    the Student Interface &rarr;</a>
+            </div>
+            <div>
+                <!-- Placeholder for actual screenshot -->
+                <div
+                    style="width: 100%; aspect-ratio: 16/9; background: var(--surface); border-radius: 1rem; border: 1px solid var(--surface-border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; color: var(--on-surface-variant); position: relative;">
+                    <span class="material-symbols-outlined" style="font-size: 3rem; margin-bottom: 2rem;">quiz</span>
+                    <p style="position: absolute; margin-top: 5rem; font-weight: bold;">Student Dashboard Screenshot</p>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Student Feature -->
-    <div class="showcase-grid reverse">
-        <div class="showcase-text">
-            <h3>Frictionless Student Experience</h3>
-            <p>Students enter a highly immersive, distraction-free environment to browse available exams and execute their assessments. The interface respects focus and emphasizes clarity above all.</p>
-            <a href="student_dashboard.html" style="color: var(--primary); font-weight: bold; text-decoration: none; border-bottom: 2px solid var(--primary-dim); padding-bottom: 2px;">View the Student Interface &rarr;</a>
-        </div>
-        <div>
-            <!-- Placeholder for actual screenshot -->
-            <div style="width: 100%; aspect-ratio: 16/9; background: var(--surface); border-radius: 1rem; border: 1px solid var(--surface-border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; color: var(--on-surface-variant); position: relative;">
-                <span class="material-symbols-outlined" style="font-size: 3rem; margin-bottom: 2rem;">quiz</span>
-                <p style="position: absolute; margin-top: 5rem; font-weight: bold;">Student Dashboard Screenshot</p>
+        <!-- Security/Tech -->
+        <div class="showcase-grid">
+            <div class="showcase-text">
+                <h3>Enterprise-Grade Security</h3>
+                <p>Protected by comprehensive httpOnly cookie-based authentication, granular RBAC hierarchy, and strict
+                    rate-limiting, OnSight ensures your institutional data remains impenetrable.</p>
+                <a href="mailto:basantbhushan89@gmail.com"
+                    style="color: var(--primary); font-weight: bold; text-decoration: none; border-bottom: 2px solid var(--primary-dim); padding-bottom: 2px;">Contact
+                    the Head Engineer &rarr;</a>
+            </div>
+            <div>
+                <div
+                    style="width: 100%; aspect-ratio: 16/9; background: var(--surface); border-radius: 1rem; border: 1px solid var(--surface-border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; color: var(--on-surface-variant); position: relative;">
+                    <span class="material-symbols-outlined" style="font-size: 3rem; margin-bottom: 2rem;">lock</span>
+                    <p style="position: absolute; margin-top: 5rem; font-weight: bold;">Backend Architecture Diagram</p>
+                </div>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- Security/Tech -->
-    <div class="showcase-grid">
-        <div class="showcase-text">
-            <h3>Enterprise-Grade Security</h3>
-            <p>Protected by comprehensive httpOnly cookie-based authentication, granular RBAC hierarchy, and strict rate-limiting, OnSight ensures your institutional data remains impenetrable.</p>
-            <a href="mailto:basantbhushan89@gmail.com" style="color: var(--primary); font-weight: bold; text-decoration: none; border-bottom: 2px solid var(--primary-dim); padding-bottom: 2px;">Contact the Head Engineer &rarr;</a>
-        </div>
-        <div>
-            <div style="width: 100%; aspect-ratio: 16/9; background: var(--surface); border-radius: 1rem; border: 1px solid var(--surface-border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; color: var(--on-surface-variant); position: relative;">
-                <span class="material-symbols-outlined" style="font-size: 3rem; margin-bottom: 2rem;">lock</span>
-                <p style="position: absolute; margin-top: 5rem; font-weight: bold;">Backend Architecture Diagram</p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Footer -->
-<footer class="footer">
-    <p>&copy; 2026 OnSight. Engineered by Team.</p>
-    <p>For administrative inquiries and production access, please <a href="mailto:basantbhushan89@gmail.com">contact the administrator</a>.</p>
-</footer>
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2026 OnSight. Engineered by Team.</p>
+        <p>For administrative inquiries and production access, please <a href="mailto:basantbhushan89@gmail.com">contact
+                the administrator</a>.</p>
+    </footer>
 
 </body>
+
 </html>

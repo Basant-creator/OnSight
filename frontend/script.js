@@ -153,6 +153,7 @@ if (loginForm) {
         
         // Lock UI
         const btn = e.target.querySelector("button");
+        btn.disabled = true;
         btn.innerHTML = `<span class="material-symbols-outlined material-fill" style="animation: spin 1s linear infinite;">sync</span> Authenticating...`;
 
         const { ok, data } = await apiFetch("/auth/login", {
@@ -161,6 +162,10 @@ if (loginForm) {
         });
 
         if (ok) {
+            // Restore UI for bfcache
+            btn.disabled = false;
+            btn.innerHTML = `Authenticate <span class="material-symbols-outlined">login</span>`;
+            
             // Store non-sensitive user metadata so the UI recognizes who is logged in
             localStorage.setItem("onsight_user", JSON.stringify(data.user));
             if (data.token) localStorage.setItem("onsight_token", data.token);
@@ -176,6 +181,7 @@ if (loginForm) {
             }
         } else {
             // Restore UI and display error
+            btn.disabled = false;
             btn.innerHTML = `Authenticate <span class="material-symbols-outlined">login</span>`;
             errorBox.style.display = "block";
             errorBox.textContent = data.error || "Authentication failed.";
@@ -200,6 +206,7 @@ if (provisionForm) {
         const btn = e.target.querySelector("button");
 
         // Lock UI
+        btn.disabled = true;
         btn.innerHTML = `<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">sync</span> Injecting...`;
 
         const { ok, status, data } = await apiFetch("/api/admin/create-user", {
@@ -208,6 +215,7 @@ if (provisionForm) {
         });
 
         // Restore UI Button
+        btn.disabled = false;
         btn.innerHTML = `Inject Entity into Database <span class="material-symbols-outlined material-fill">add_circle</span>`;
         msgBox.style.display = "block";
 

@@ -1,6 +1,11 @@
 // Global configuration
 const API_BASE = window.API_BASE || "http://localhost:5000";
 
+// Ping server every 10 mins to keep it awake (excluded from rate limits)
+setInterval(() => {
+    fetch(`${API_BASE}/health`).catch(() => {});
+}, 10 * 60 * 1000);
+
 // ------------------------------------------------------------------
 // THEME TOGGLE LOGIC
 // ------------------------------------------------------------------

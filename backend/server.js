@@ -7,6 +7,7 @@ const fs = require("fs")
 
 // Load .env only if it exists (development), Render injects vars directly
 const envPath = path.resolve(__dirname, '../.env')
+const rateLimit = require("express-rate-limit")
 if (fs.existsSync(envPath)) {
   require("dotenv").config({ path: envPath })
 } else {
@@ -69,6 +70,14 @@ app.get("/", (req, res) => {
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "healthy" })
 })
+
+// Global Rate Limiter (applied after health and root routes)
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: { error: "Too many requests from this IP, please try again after 15 minutes" },
+});
+app.use(globalLimiter);
 
 app.use("/auth", authRoutes)
 app.use("/api", protectedRoutes)

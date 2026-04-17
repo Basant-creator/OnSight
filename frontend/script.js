@@ -302,6 +302,18 @@ async function loadStudentPerformance() {
         noDataMessage.style.display = "none";
         chartContainer.style.display = "flex";
 
+        // Calculate total average percentage
+        let totalPct = 0;
+        publishedAttempts.forEach((att) => {
+            totalPct += att.totalQuestions > 0 ? (att.score / att.totalQuestions) * 100 : 0;
+        });
+        const avgPercentage = publishedAttempts.length > 0 ? Math.round(totalPct / publishedAttempts.length) : 0;
+        
+        const avgDisplay = document.getElementById("avg-percentage-display");
+        if (avgDisplay) {
+            avgDisplay.innerText = `Avg Percentage: ${avgPercentage}%`;
+        }
+
         // Sort attempts by date (oldest first for the chart)
         const sortedAttempts = publishedAttempts.sort((a, b) => new Date(a.attemptDate) - new Date(b.attemptDate));
 
@@ -319,7 +331,7 @@ async function loadStudentPerformance() {
 
             return `
                 <div class="bar-item">
-                    <div class="bar ${isLatest ? 'highlight-bar' : ''}" style="height: ${percentage}%;"></div>
+                    <div class="bar ${isLatest ? 'highlight-bar' : ''}" style="height: ${percentage}%;" title="${examTitle}: ${attempt.score}/${attempt.totalQuestions} (${percentage}%)"></div>
                     <span class="bar-label" title="${examTitle}">${shortLabel}</span>
                 </div>
             `;

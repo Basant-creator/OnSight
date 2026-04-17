@@ -29,7 +29,20 @@ if (!process.env.JWT_SECRET) {
 }
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:5500",
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      "https://on-sight-cu4b.vercel.app",
+      "http://localhost:5000",
+      "http://localhost:5500",
+      "http://127.0.0.1:5500"
+    ];
+    if (process.env.FRONTEND_URL) allowedOrigins.push(process.env.FRONTEND_URL);
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }))
 app.use(express.json())

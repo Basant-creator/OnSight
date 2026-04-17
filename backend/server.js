@@ -3,11 +3,30 @@ const mongoose = require("mongoose")
 const cors = require("cors")
 const cookieParser = require("cookie-parser")
 const path = require("path")
-require("dotenv").config({ path: path.resolve(__dirname, '../.env') })
+const fs = require("fs")
+
+// Load .env only if it exists (development), Render injects vars directly
+const envPath = path.resolve(__dirname, '../.env')
+if (fs.existsSync(envPath)) {
+  require("dotenv").config({ path: envPath })
+} else {
+  require("dotenv").config()
+}
 
 const authRoutes = require("./routes/auth")
 const protectedRoutes = require("./routes/protected")
 const app = express()
+const PORT = Number(process.env.PORT) || 5000
+
+// Validate required env vars
+if (!process.env.MONGO_URI) {
+  console.error("FATAL: MONGO_URI not set")
+  process.exit(1)
+}
+if (!process.env.JWT_SECRET) {
+  console.error("FATAL: JWT_SECRET not set")
+  process.exit(1)
+}
 
 app.use(cors({
   origin: process.env.FRONTEND_URL || "http://localhost:5500",
@@ -16,13 +35,26 @@ app.use(cors({
 app.use(express.json())
 app.use(cookieParser())
 
-const mongoURI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/exam_platform"
+const mongoURI = process.env.MONGO_URI
 mongoose.connect(mongoURI)
 .then(() => console.log("MongoDB Connected"))
-.catch(err => console.log(err))
+.catch(err => {
+  console.error("MongoDB Error:", err)
+  process.exit(1)
+})
 
-app.get("/", (req,res)=>{
-    res.send("API is running")
+// Health check - REQUIRED for Render
+app.get("/", (req, res) => {
+  res.json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    mongodb: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
+  })
+})
+
+// Additional health endpoint for monitoring
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "healthy" })
 })
 
 app.use("/auth", authRoutes)
@@ -30,12 +62,22 @@ app.use("/api", protectedRoutes)
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-  console.error(`[Error] ${err.message}`);
-  const status = err.status || 500;
-  const message = err.message || "Internal Server Error";
-  res.status(status).json({ error: message });
+  console.error(`[Error] ${err.message}`)
+  const status = err.status || 500
+  const message = err.message || "Internal Server Error"
+  res.status(status).json({ error: message })
 })
 
-app.listen(5000, ()=>{
-    console.log("Server running on port 5000")
+const server = app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`)
+})
+
+// Graceful shutdown for Render
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully')
+  server.close(() => {
+    mongoose.connection.close(false, () => {
+      process.exit(0)
+    })
+  })
 })

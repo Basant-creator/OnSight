@@ -4,10 +4,10 @@ const cors = require("cors")
 const cookieParser = require("cookie-parser")
 const path = require("path")
 const fs = require("fs")
+const rateLimit = require("express-rate-limit")
 
 // Load .env only if it exists (development), Render injects vars directly
 const envPath = path.resolve(__dirname, '../.env')
-const rateLimit = require("express-rate-limit")
 if (fs.existsSync(envPath)) {
   require("dotenv").config({ path: envPath })
 } else {

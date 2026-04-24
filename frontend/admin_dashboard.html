@@ -113,8 +113,14 @@
         const userStr = localStorage.getItem("onsight_user");
         if (userStr) {
             const user = JSON.parse(userStr);
+            if (user.role !== 'head_admin' && user.role !== 'sub_admin') {
+                window.location.href = user.role === 'teacher' ? 'teacher_dashboard.html' : 'student_dashboard.html';
+                return;
+            }
             document.getElementById("currentUserDisplay").innerText = user.name;
             document.getElementById("currentRoleDisplay").innerText = "Role Validated: " + user.role.toUpperCase();
+        } else {
+            window.location.href = 'login.html';
         }
     });
 </script>
